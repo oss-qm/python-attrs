@@ -1,0 +1,5 @@
+python-attrs (15.2.0-1) unstable; urgency=low
+
+  * Initial upload (closes: #815387).
+
+ -- Tristan Seligmann <mithrandi@debian.org>  Sun, 21 Feb 2016 08:22:06 +0200

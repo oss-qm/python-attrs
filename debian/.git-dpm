@@ -6,3 +6,6 @@
 python-attrs_15.2.0.orig.tar.gz
 a5eb9abd8eb514e9b2427f916e974354dfeb8694
 33849
+debianTag="debian/%e%v"
+patchedTag="patched/%e%v"
+upstreamTag="upstream/%e%u"

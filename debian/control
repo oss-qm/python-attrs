@@ -27,7 +27,7 @@ Package: python-attr
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends}
 Recommends: ${python:Recommends}
-Suggests: ${python:Suggests}
+Suggests: python-attr-doc, ${python:Suggests}
 Description: Attributes without boilerplate (Python 2)
  attrs is an MIT-licensed Python package with class decorators that ease the
  chores of implementing the most common attribute-related object protocols.
@@ -45,7 +45,7 @@ Package: python3-attr
 Architecture: all
 Depends: ${misc:Depends}, ${python3:Depends}
 Recommends: ${python3:Recommends}
-Suggests: ${python3:Suggests}
+Suggests: python-attr-doc, ${python3:Suggests}
 Description: Attributes without boilerplate (Python 3)
  attrs is an MIT-licensed Python package with class decorators that ease the
  chores of implementing the most common attribute-related object protocols.
@@ -63,7 +63,7 @@ Package: pypy-attr
 Architecture: all
 Depends: ${misc:Depends}, ${pypy:Depends}
 Recommends: ${pypy:Recommends}
-Suggests: ${pypy:Suggests}
+Suggests: python-attr-doc, ${pypy:Suggests}
 Description: Attributes without boilerplate (PyPy)
  attrs is an MIT-licensed Python package with class decorators that ease the
  chores of implementing the most common attribute-related object protocols.

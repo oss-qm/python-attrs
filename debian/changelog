@@ -2,6 +2,7 @@ python-attrs (15.2.0-2) unstable; urgency=medium
 
   * Fix debian/watch.
   * Add python-attr-doc to Suggests: (closes: #816577).
+  * Bump Standards-Version to 3.9.8 (no changes).
 
  -- Tristan Seligmann <mithrandi@debian.org>  Wed, 27 Apr 2016 21:51:33 +0200
 

@@ -12,3 +12,7 @@ override_dh_auto_build:
 	   http_proxy='127.0.0.1:9' \
 	   https_proxy='127.0.0.1:9' \
 	   sphinx-build -N -b html docs/ $(CURDIR)/.pybuild/docs/html/
+
+override_dh_auto_test:
+	dh_auto_test
+	rm -r .pybuild/*/build/.hypothesis

@@ -23,11 +23,11 @@ from . import filters
 from . import validators
 
 
-__version__ = "15.2.0"
+__version__ = "16.0.0"
 
 __title__ = "attrs"
 __description__ = "Attributes without boilerplate."
-__uri__ = "https://attrs.readthedocs.org/"
+__uri__ = "https://attrs.readthedocs.io/"
 
 __author__ = "Hynek Schlawack"
 __email__ = "hs@ox.cx"

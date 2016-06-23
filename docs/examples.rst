@@ -71,6 +71,20 @@ For private attributes, ``attrs`` will strip the leading underscores for keyword
    >>> C(x=1)
    C(_x=1)
 
+If you want to initialize your private attributes yourself, you can do that too:
+
+.. doctest::
+
+   >>> @attr.s
+   ... class C(object):
+   ...     _x = attr.ib(init=False, default=42)
+   >>> C()
+   C(_x=42)
+   >>> C(23)
+   Traceback (most recent call last):
+      ...
+   TypeError: __init__() takes exactly 1 argument (2 given)
+
 An additional way (not unlike ``characteristic``) of defining attributes is supported too.
 This is useful in times when you want to enhance classes that are not yours (nice ``__repr__`` for Django models anyone?):
 
@@ -189,7 +203,7 @@ For the common case where you want to :func:`include <attr.filters.include>` or 
    ...     y = attr.ib()
    ...     z = attr.ib()
    >>> attr.asdict(C("foo", "2", 3), filter=attr.filters.include(int, C.x))
-   {'x': 'foo', 'z': 3}
+   {'z': 3, 'x': 'foo'}
 
 
 Defaults
@@ -219,11 +233,11 @@ And sometimes you even want mutable objects as default values (ever used acciden
    ...             return self.pool.pop()
    ...         except IndexError:
    ...             if self.debug:
-   ...                 print "New connection!"
+   ...                 print("New connection!")
    ...             return Connection.connect(self.db_string)
    ...     def free_connection(self, conn):
    ...         if self.debug:
-   ...             print "Connection returned!"
+   ...             print("Connection returned!")
    ...         self.pool.appendleft(conn)
    ...
    >>> cp = ConnectionPool("postgres://localhost")
@@ -361,6 +375,72 @@ Converters are run *before* validators, so you can use validators to check the f
     Traceback (most recent call last):
         ...
     ValueError: x must be be at least 0.
+
+
+.. _slots:
+
+Slots
+-----
+
+By default, instances of classes have a dictionary for attribute storage.
+This wastes space for objects having very few instance variables.
+The space consumption can become significant when creating large numbers of instances.
+
+Normal Python classes can avoid using a separate dictionary for each instance of a class by `defining <https://docs.python.org/3.5/reference/datamodel.html#slots>`_ ``__slots__``.
+For ``attrs`` classes it's enough to set ``slots=True``:
+
+.. doctest::
+
+   >>> @attr.s(slots=True)
+   ... class Coordinates(object):
+   ...     x = attr.ib()
+   ...     y = attr.ib()
+
+
+.. note::
+
+    ``attrs`` slot classes can inherit from other classes just like non-slot classes, but some of the benefits of slot classes are lost if you do that.
+    If you must inherit from other classes, try to inherit only from other slot classes.
+
+Slot classes are a little different than ordinary, dictionary-backed classes:
+
+- Assigning to a non-existent attribute of an instance will result in an ``AttributeError`` being raised.
+  Depending on your needs, this might be a good thing since it will let you catch typos early.
+  This is not the case if your class inherits from any non-slot classes.
+
+  .. doctest::
+
+     >>> @attr.s(slots=True)
+     ... class Coordinates(object):
+     ...     x = attr.ib()
+     ...     y = attr.ib()
+     ...
+     >>> c = Coordinates(x=1, y=2)
+     >>> c.z = 3
+     Traceback (most recent call last):
+         ...
+     AttributeError: 'Coordinates' object has no attribute 'z'
+
+- Slot classes cannot share attribute names with their instances, while non-slot classes can.
+  The following behaves differently if slot classes are used:
+
+  .. doctest::
+
+    >>> @attr.s
+    ... class C(object):
+    ...     x = attr.ib()
+    >>> C.x
+    Attribute(name='x', default=NOTHING, validator=None, repr=True, cmp=True, hash=True, init=True, convert=None)
+    >>> @attr.s(slots=True)
+    ... class C(object):
+    ...     x = attr.ib()
+    >>> C.x
+    <member 'x' of 'C' objects>
+
+- Since non-slot classes cannot be turned into slot classes after they have been created, ``attr.s(.., slots=True)`` will *replace* the class it is applied to with a copy.
+  In almost all cases this isn't a problem, but we mention it for the sake of completeness.
+
+All in all, setting ``slots=True`` is usually a very good idea.
 
 
 Other Goodies

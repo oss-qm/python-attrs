@@ -2,10 +2,9 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 import hashlib
-import inspect
 import linecache
 
-from ._compat import exec_, iteritems
+from ._compat import exec_, iteritems, isclass, iterkeys
 from . import _config
 
 
@@ -22,7 +21,7 @@ class _Nothing(object):
         return self
 
     def __eq__(self, other):
-        return self.__class__ == _Nothing
+        return other.__class__ == _Nothing
 
     def __ne__(self, other):
         return not self == other
@@ -52,10 +51,10 @@ def attr(default=NOTHING, validator=None,
         :func:`attr.s`!
 
     :param default: Value that is used if an ``attrs``-generated
-        ``__init__`` is used and no value is passed while instantiating.  If
-        the value an instance of :class:`Factory`, it callable will be use to
-        construct a new value (useful for mutable datatypes like lists or
-        dicts).
+        ``__init__`` is used and no value is passed while instantiating or the
+        attribute is excluded using ``init=False``.  If the value an instance
+        of :class:`Factory`, it callable will be use to construct a new value
+        (useful for mutable datatypes like lists or dicts).
     :type default: Any value.
 
     :param callable validator: :func:`callable` that is called by
@@ -79,7 +78,9 @@ def attr(default=NOTHING, validator=None,
         method.
 
     :param bool init: Include this attribute in the generated ``__init__``
-        method.
+        method.  It is possible to set this to ``False`` and set a default
+        value.  In that case this attributed is unconditionally initialized
+        with the specified default value or factory.
 
     :param callable convert: :func:`callable` that is called by
         ``attrs``-generated ``__init__`` methods to convert attribute's value
@@ -130,18 +131,20 @@ def _transform_attrs(cl, these):
     for a in cl.__attrs_attrs__:
         if these is None and a not in super_cls:
             setattr(cl, a.name, a)
-        if had_default is True and a.default is NOTHING:
+        if had_default is True and a.default is NOTHING and a.init is True:
             raise ValueError(
                 "No mandatory attributes allowed after an attribute with a "
                 "default value or factory.  Attribute in question: {a!r}"
                 .format(a=a)
             )
-        elif had_default is False and a.default is not NOTHING:
+        elif had_default is False and \
+                a.default is not NOTHING and \
+                a.init is not False:
             had_default = True
 
 
 def attributes(maybe_cl=None, these=None, repr_ns=None,
-               repr=True, cmp=True, hash=True, init=True):
+               repr=True, cmp=True, hash=True, init=True, slots=False):
     """
     A class decorator that adds `dunder
     <https://wiki.python.org/moin/DunderAlias>`_\ -methods according to the
@@ -177,10 +180,25 @@ def attributes(maybe_cl=None, these=None, repr_ns=None,
     :param init: Create a ``__init__`` method that initialiazes the ``attrs``
         attributes.  Leading underscores are stripped for the argument name.
     :type init: bool
+
+    :param slots: Create a slots_-style class that's more memory-efficient.
+        See :ref:`slots` for further ramifications.
+    :type slots: bool
+
+    .. _slots: https://docs.python.org/3.5/reference/datamodel.html#slots
     """
     def wrap(cl):
         if getattr(cl, "__class__", None) is None:
             raise TypeError("attrs only works with new-style classes.")
+        if slots:
+            # Only need this later if we're using slots.
+            if these is None:
+                ca_list = [name
+                           for name, attr
+                           in cl.__dict__.items()
+                           if isinstance(attr, _CountingAttr)]
+            else:
+                ca_list = list(iterkeys(these))
         _transform_attrs(cl, these)
         if repr is True:
             cl = _add_repr(cl, ns=repr_ns)
@@ -190,6 +208,21 @@ def attributes(maybe_cl=None, these=None, repr_ns=None,
             cl = _add_hash(cl)
         if init is True:
             cl = _add_init(cl)
+        if slots:
+            cl_dict = dict(cl.__dict__)
+            cl_dict["__slots__"] = tuple(ca_list)
+            for ca_name in ca_list:
+                # It might not actually be in there, e.g. if using 'these'.
+                cl_dict.pop(ca_name, None)
+            cl_dict.pop('__dict__', None)
+
+            if repr_ns is None:
+                cl_name = getattr(cl, "__qualname__", cl.__name__)
+            else:
+                cl_name = cl.__name__
+
+            cl = type(cl_name, cl.__bases__, cl_dict)
+
         return cl
 
     # attrs_or class type depends on the usage of the decorator.  It's a class
@@ -333,7 +366,8 @@ def _add_repr(cl, ns=None, attrs=None):
 
 
 def _add_init(cl):
-    attrs = [a for a in cl.__attrs_attrs__ if a.init]
+    attrs = [a for a in cl.__attrs_attrs__
+             if a.init or a.default is not NOTHING]
 
     # We cache the generated init methods for the same kinds of attributes.
     sha1 = hashlib.sha1()
@@ -376,7 +410,7 @@ def fields(cl):
 
     :rtype: tuple of :class:`attr.Attribute`
     """
-    if not inspect.isclass(cl):
+    if not isclass(cl):
         raise TypeError("Passed object must be a class.")
     attrs = getattr(cl, "__attrs_attrs__", None)
     if attrs is None:
@@ -384,6 +418,15 @@ def fields(cl):
             cl=cl
         ))
     return copy.deepcopy(attrs)
+
+
+def _fast_attrs_iterate(inst):
+    """
+    Fast internal iteration over the attr descriptors.
+
+    Using fields to iterate is slow because it involves deepcopy.
+    """
+    return inst.__class__.__attrs_attrs__
 
 
 def validate(inst):
@@ -397,7 +440,7 @@ def validate(inst):
     if _config._run_validators is False:
         return
 
-    for a in inst.__class__.__attrs_attrs__:
+    for a in _fast_attrs_iterate(inst):
         if a.validator is not None:
             a.validator(inst, a, getattr(inst, a.name))
 
@@ -410,7 +453,7 @@ def _convert(inst):
 
     :param inst: Instance of a class with ``attrs`` attributes.
     """
-    for a in fields(inst.__class__):
+    for a in _fast_attrs_iterate(inst):
         if a.convert is not None:
             setattr(inst, a.name, a.convert(getattr(inst, a.name)))
 
@@ -430,7 +473,18 @@ def _attrs_to_script(attrs):
             has_convert = True
         attr_name = a.name
         arg_name = a.name.lstrip("_")
-        if a.default is not NOTHING and not isinstance(a.default, Factory):
+        if a.init is False:
+            if isinstance(a.default, Factory):
+                lines.append("""\
+self.{attr_name} = attr_dict["{attr_name}"].default.factory()""".format(
+                    attr_name=attr_name,
+                ))
+            else:
+                lines.append("""\
+self.{attr_name} = attr_dict["{attr_name}"].default""".format(
+                    attr_name=attr_name,
+                ))
+        elif a.default is not NOTHING and not isinstance(a.default, Factory):
             args.append(
                 "{arg_name}=attr_dict['{attr_name}'].default".format(
                     arg_name=arg_name,

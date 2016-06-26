@@ -1,6 +1,7 @@
 python-attrs (16.0.0-1) unstable; urgency=medium
 
   * New upstream release.
+  * Install doc-base entry.
 
  -- Tristan Seligmann <mithrandi@debian.org>  Thu, 23 Jun 2016 19:50:19 +0200
 

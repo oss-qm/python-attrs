@@ -1,3 +1,10 @@
+python-attrs (16.2.0-1) unstable; urgency=medium
+
+  * New upstream release.
+    - Doc build is now reproducible (closes: #833886).
+
+ -- Tristan Seligmann <mithrandi@debian.org>  Mon, 10 Oct 2016 01:09:18 +0200
+
 python-attrs (16.0.0-1) unstable; urgency=medium
 
   * New upstream release.

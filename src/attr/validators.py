@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 from ._make import attr, attributes
 
 
-@attributes(repr=False)
+@attributes(repr=False, slots=True)
 class _InstanceOfValidator(object):
     type = attr()
 
@@ -47,7 +47,7 @@ def instance_of(type):
     return _InstanceOfValidator(type)
 
 
-@attributes(repr=False)
+@attributes(repr=False, slots=True)
 class _ProvidesValidator(object):
     interface = attr()
 
@@ -75,7 +75,7 @@ def provides(interface):
     A validator that raises a :exc:`TypeError` if the initializer is called
     with an object that does not provide the requested *interface* (checks are
     performed using ``interface.providedBy(value)`` (see `zope.interface
-    <http://docs.zope.org/zope.interface/>`_).
+    <https://zopeinterface.readthedocs.io/en/latest/>`_).
 
     :param interface: The interface to check for.
     :type interface: zope.interface.Interface
@@ -87,7 +87,7 @@ def provides(interface):
     return _ProvidesValidator(interface)
 
 
-@attributes(repr=False)
+@attributes(repr=False, slots=True)
 class _OptionalValidator(object):
     validator = attr()
 

@@ -18,11 +18,11 @@ What follows is the API explanation, if you'd like a more hands-on introduction,
 Core
 ----
 
-.. autofunction:: attr.s(these=None, repr_ns=None, repr=True, cmp=True, hash=True, init=True, slots=False)
+.. autofunction:: attr.s(these=None, repr_ns=None, repr=True, cmp=True, hash=True, init=True, slots=False, frozen=False)
 
    .. note::
 
-      ``attrs`` also comes with a less playful alias ``attr.attributes``.
+      ``attrs`` also comes with a serious business alias ``attr.attrs``.
 
    For example:
 
@@ -48,14 +48,13 @@ Core
 
    .. note::
 
-      ``attrs`` also comes with a less playful alias ``attr.attr``.
+      ``attrs`` also comes with a serious business alias ``attr.attrib``.
 
 
 .. autoclass:: attr.Attribute
 
    Instances of this class are frequently used for introspection purposes like:
 
-   - Class attributes on ``attrs``-decorated classes *after* ``@attr.s`` has been applied.
    - :func:`fields` returns a tuple of them.
    - Validators get them passed as the first argument.
 
@@ -103,10 +102,17 @@ Core
       C(x=[])
 
 
+.. autoexception:: attr.exceptions.FrozenInstanceError
+.. autoexception:: attr.exceptions.AttrsAttributeNotFoundError
+.. autoexception:: attr.exceptions.NotAnAttrsClassError
+
+
+.. _helpers:
+
 Helpers
 -------
 
-``attrs`` comes with a bunch of helper methods that make the work with it easier:
+``attrs`` comes with a bunch of helper methods that make working with it easier:
 
 .. autofunction:: attr.fields
 
@@ -120,6 +126,10 @@ Helpers
       ...     y = attr.ib()
       >>> attr.fields(C)
       (Attribute(name='x', default=NOTHING, validator=None, repr=True, cmp=True, hash=True, init=True, convert=None), Attribute(name='y', default=NOTHING, validator=None, repr=True, cmp=True, hash=True, init=True, convert=None))
+      >>> attr.fields(C)[1]
+      Attribute(name='y', default=NOTHING, validator=None, repr=True, cmp=True, hash=True, init=True, convert=None)
+      >>> attr.fields(C).y is attr.fields(C)[1]
+      True
 
 
 .. autofunction:: attr.has
@@ -151,12 +161,26 @@ Helpers
       {'y': {'y': 3, 'x': 2}, 'x': 1}
 
 
-``attrs`` comes with some handy helpers for filtering:
+.. autofunction:: attr.astuple
+
+   For example:
+
+   .. doctest::
+
+      >>> @attr.s
+      ... class C(object):
+      ...     x = attr.ib()
+      ...     y = attr.ib()
+      >>> attr.astuple(C(1,2))
+      (1, 2)
+
+``attrs`` includes some handy helpers for filtering:
 
 .. autofunction:: attr.filters.include
 
 .. autofunction:: attr.filters.exclude
 
+See :ref:`asdict` for examples.
 
 .. autofunction:: assoc
 
@@ -176,7 +200,6 @@ Helpers
       C(x=1, y=3)
       >>> i1 == i2
       False
-
 
 .. autofunction:: validate
 
@@ -207,7 +230,7 @@ Validators can be globally disabled if you want to run them only in development 
 Validators
 ----------
 
-``attrs`` comes with some common validators within the ``attrs.validators`` module:
+``attrs`` comes with some common validators in the ``attrs.validators`` module:
 
 
 .. autofunction:: attr.validators.instance_of
@@ -251,3 +274,10 @@ Validators
       TypeError: ("'x' must be <type 'int'> (got '42' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>), <type 'int'>, '42')
       >>> C(None)
       C(x=None)
+
+
+Deprecated APIs
+---------------
+
+The serious business aliases used to be called ``attr.attributes`` and ``attr.attr``.
+There are no plans to remove them but they shouldn't be used in new code.

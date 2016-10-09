@@ -5,15 +5,14 @@ Tests for `attr._make`.
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from hypothesis import given
-from hypothesis.strategies import booleans
 
-from . import simple_attr
+from hypothesis import given
+from hypothesis.strategies import booleans, integers, sampled_from
+
 from attr import _config
-from attr._compat import PY3
+from attr._compat import PY2
 from attr._make import (
     Attribute,
-    NOTHING,
     _CountingAttr,
     _transform_attrs,
     attr,
@@ -21,7 +20,13 @@ from attr._make import (
     fields,
     make_class,
     validate,
+    Factory,
 )
+from attr.exceptions import NotAnAttrsClassError
+
+from .utils import simple_attr, simple_attrs, simple_classes
+
+attrs = simple_attrs.map(lambda c: Attribute.from_counting_attr('name', c))
 
 
 class TestCountingAttr(object):
@@ -153,7 +158,7 @@ class TestAttributes(object):
     """
     Tests for the `attributes` class decorator.
     """
-    @pytest.mark.skipif(PY3, reason="No old-style classes in Py3")
+    @pytest.mark.skipif(not PY2, reason="No old-style classes in Py3")
     def test_catches_old_style(self):
         """
         Raises TypeError on old-style classes.
@@ -183,6 +188,14 @@ class TestAttributes(object):
             pass
         assert "C3()" == repr(C3())
         assert C3() == C3()
+
+    @given(attr=attrs, attr_name=sampled_from(Attribute.__slots__))
+    def test_immutable(self, attr, attr_name):
+        """
+        Attribute instances are immutable.
+        """
+        with pytest.raises(AttributeError):
+            setattr(attr, attr_name, 1)
 
     @pytest.mark.parametrize("method_name", [
         "__repr__",
@@ -247,7 +260,7 @@ class TestAttributes(object):
 
         assert sentinel == getattr(C, method_name)
 
-    @pytest.mark.skipif(not PY3, reason="__qualname__ is PY3-only.")
+    @pytest.mark.skipif(PY2, reason="__qualname__ is PY3-only.")
     @given(slots_outer=booleans(), slots_inner=booleans())
     def test_repr_qualname(self, slots_outer, slots_inner):
         """
@@ -280,29 +293,6 @@ class GC(object):
     @attributes
     class D(object):
         pass
-
-
-class TestAttribute(object):
-    """
-    Tests for `Attribute`.
-    """
-    def test_missing_argument(self):
-        """
-        Raises `TypeError` if an Argument is missing.
-        """
-        with pytest.raises(TypeError) as e:
-            Attribute(default=NOTHING, validator=None)
-        assert ("Missing argument 'name'.",) == e.value.args
-
-    def test_too_many_arguments(self):
-        """
-        Raises `TypeError` if extra arguments are passed.
-        """
-        with pytest.raises(TypeError) as e:
-            Attribute(name="foo", default=NOTHING,
-                      factory=NOTHING, validator=None,
-                      repr=True, cmp=True, hash=True, init=True, convert=None)
-        assert ("Too many arguments.",) == e.value.args
 
 
 class TestMakeClass(object):
@@ -374,26 +364,26 @@ class TestFields(object):
         """
         Raises `ValueError` if passed a non-``attrs`` instance.
         """
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(NotAnAttrsClassError) as e:
             fields(object)
         assert (
             "{o!r} is not an attrs-decorated class.".format(o=object)
         ) == e.value.args[0]
 
+    @given(simple_classes())
     def test_fields(self, C):
         """
         Returns a list of `Attribute`a.
         """
         assert all(isinstance(a, Attribute) for a in fields(C))
 
-    def test_copies(self, C):
+    @given(simple_classes())
+    def test_fields_properties(self, C):
         """
-        Returns a new list object with new `Attribute` objects.
+        Fields returns a tuple with properties.
         """
-        assert C.__attrs_attrs__ is not fields(C)
-        assert all(new == original and new is not original
-                   for new, original
-                   in zip(fields(C), C.__attrs_attrs__))
+        for attribute in fields(C):
+            assert getattr(fields(C), attribute.name) is attribute
 
 
 class TestConvert(object):
@@ -410,6 +400,33 @@ class TestConvert(object):
         assert c.x == 2
         assert c.y == 2
 
+    @given(integers(), booleans())
+    def test_convert_property(self, val, init):
+        """
+        Property tests for attributes with convert.
+        """
+        C = make_class("C", {"y": attr(),
+                             "x": attr(init=init, default=val,
+                                       convert=lambda v: v + 1),
+                             })
+        c = C(2)
+        assert c.x == val + 1
+        assert c.y == 2
+
+    @given(integers(), booleans())
+    def test_convert_factory_property(self, val, init):
+        """
+        Property tests for attributes with convert, and a factory default.
+        """
+        C = make_class("C", {"y": attr(),
+                             "x": attr(init=init,
+                                       default=Factory(lambda: val),
+                                       convert=lambda v: v + 1),
+                             })
+        c = C(2)
+        assert c.x == val + 1
+        assert c.y == 2
+
     def test_convert_before_validate(self):
         """
         Validation happens after conversion.
@@ -422,6 +439,13 @@ class TestConvert(object):
              "y": attr()})
         with pytest.raises(ZeroDivisionError):
             C(1, 2)
+
+    def test_frozen(self):
+        """
+        Converters circumvent immutability.
+        """
+        C = make_class("C", {"x": attr(convert=lambda v: int(v))}, frozen=True)
+        C("1")
 
 
 class TestValidate(object):
@@ -462,8 +486,13 @@ class TestValidate(object):
             raise Exception(obj)
 
         C = make_class("C", {"x": attr(validator=raiser)})
-        assert 1 == C(1).x
+        c = C(1)
+        validate(c)
+        assert 1 == c.x
         _config._run_validators = True
+
+        with pytest.raises(Exception):
+            validate(c)
 
         with pytest.raises(Exception) as e:
             C(1)

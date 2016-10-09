@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+import pickle
 
 import pytest
 from hypothesis import given
@@ -8,6 +9,7 @@ import attr
 
 from attr._compat import TYPE
 from attr._make import Attribute, NOTHING
+from attr.exceptions import FrozenInstanceError
 
 
 @attr.s
@@ -62,6 +64,16 @@ class SubSlots(SuperSlots):
     y = attr.ib()
 
 
+@attr.s(frozen=True, slots=True)
+class Frozen(object):
+    x = attr.ib()
+
+
+@attr.s(frozen=True, slots=False)
+class FrozenNoSlots(object):
+    x = attr.ib()
+
+
 class TestDarkMagic(object):
     """
     Integration tests.
@@ -114,12 +126,12 @@ class TestDarkMagic(object):
 
         assert "C3(_x=1)" == repr(C3(x=1))
 
-    @given(booleans())
-    def test_programmatic(self, slots):
+    @given(booleans(), booleans())
+    def test_programmatic(self, slots, frozen):
         """
         `attr.make_class` works.
         """
-        PC = attr.make_class("PC", ["a", "b"], slots=slots)
+        PC = attr.make_class("PC", ["a", "b"], slots=slots, frozen=frozen)
         assert (
             Attribute(name="a", default=NOTHING, validator=None,
                       repr=True, cmp=True, hash=True, init=True),
@@ -155,3 +167,46 @@ class TestDarkMagic(object):
         i = Sub2(x=obj)
         assert i.x is i.meth() is obj
         assert "Sub2(x={obj})".format(obj=obj) == repr(i)
+
+    @pytest.mark.parametrize("frozen_class", [
+        Frozen,  # has slots=True
+        attr.make_class("FrozenToo", ["x"], slots=False, frozen=True),
+    ])
+    def test_frozen_instance(self, frozen_class):
+        """
+        Frozen instances can't be modified (easily).
+        """
+        frozen = frozen_class(1)
+
+        with pytest.raises(FrozenInstanceError) as e:
+            frozen.x = 2
+
+        assert e.value.args[0] == "can't set attribute"
+        assert 1 == frozen.x
+
+    @pytest.mark.parametrize("cls",
+                             [C1, C1Slots, C2, C2Slots, Super, SuperSlots,
+                              Sub, SubSlots, Frozen, FrozenNoSlots])
+    @pytest.mark.parametrize("protocol",
+                             range(2, pickle.HIGHEST_PROTOCOL + 1))
+    def test_pickle_attributes(self, cls, protocol):
+        """
+        Pickling/un-pickling of Attribute instances works.
+        """
+        for attribute in attr.fields(cls):
+            assert attribute == pickle.loads(pickle.dumps(attribute, protocol))
+
+    @pytest.mark.parametrize("cls",
+                             [C1, C1Slots, C2, C2Slots, Super, SuperSlots,
+                              Sub, SubSlots, Frozen, FrozenNoSlots])
+    @pytest.mark.parametrize("protocol",
+                             range(2, pickle.HIGHEST_PROTOCOL + 1))
+    def test_pickle_object(self, cls, protocol):
+        """
+        Pickle object serialization works on all kinds of attrs classes.
+        """
+        if len(attr.fields(cls)) == 2:
+            obj = cls(123, 456)
+        else:
+            obj = cls(123)
+        assert repr(obj) == repr(pickle.loads(pickle.dumps(obj, protocol)))

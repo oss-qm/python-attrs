@@ -22,7 +22,7 @@ The simplest possible usage would be:
    >>> Empty() is Empty()
    False
 
-So in other words: ``attrs`` useful even without actual attributes!
+So in other words: ``attrs`` is useful even without actual attributes!
 
 But you'll usually want some data on your classes, so let's add some:
 
@@ -33,7 +33,7 @@ But you'll usually want some data on your classes, so let's add some:
    ...     x = attr.ib()
    ...     y = attr.ib()
 
-These by default, all features are added, so you have immediately a fully functional data class with a nice ``repr`` string and comparison methods.
+By default, all features are added, so you immediately have a fully functional data class with a nice ``repr`` string and comparison methods.
 
 .. doctest::
 
@@ -46,16 +46,17 @@ These by default, all features are added, so you have immediately a fully functi
    >>> c1 == c2
    False
 
-As shown, the generated ``__init__`` method allows both for positional and keyword arguments.
+As shown, the generated ``__init__`` method allows for both positional and keyword arguments.
 
-If playful naming turns you off, ``attrs`` comes with no-nonsense aliases:
+If playful naming turns you off, ``attrs`` comes with serious business aliases:
 
 .. doctest::
 
-   >>> @attr.attributes
+   >>> from attr import attrs, attrib
+   >>> @attrs
    ... class SeriousCoordinates(object):
-   ...     x = attr.attr()
-   ...     y = attr.attr()
+   ...     x = attrib()
+   ...     y = attrib()
    >>> SeriousCoordinates(1, 2)
    SeriousCoordinates(x=1, y=2)
    >>> attr.fields(Coordinates) == attr.fields(SeriousCoordinates)
@@ -116,7 +117,7 @@ Or if you want to use properties:
       ...
    AttributeError: can't set attribute
 
-`Sub-classing <https://www.youtube.com/watch?v=3MNVP9-hglc>`_ is bad for you, but ``attrs`` will still do what you'd hope for:
+`Subclassing <https://www.youtube.com/watch?v=3MNVP9-hglc>`_ is bad for you, but ``attrs`` will still do what you'd hope for:
 
 .. doctest::
 
@@ -156,11 +157,13 @@ Therefore ``@attr.s`` comes with the ``repr_ns`` option to set it manually:
    C.D()
 
 ``repr_ns`` works on both Python 2 and 3.
-On Python 3 is overrides the implicit detection.
+On Python 3 it overrides the implicit detection.
 
 
-Converting to Dictionaries
---------------------------
+.. _asdict:
+
+Converting to Collections Types
+-------------------------------
 
 When you have a class with data, it often is very convenient to transform that class into a :class:`dict` (for example if you want to serialize it to JSON):
 
@@ -195,15 +198,40 @@ For the common case where you want to :func:`include <attr.filters.include>` or 
    ...     login = attr.ib()
    ...     password = attr.ib()
    ...     id = attr.ib()
-   >>> attr.asdict(User("jane", "s33kred", 42), filter=attr.filters.exclude(User.password, int))
+   >>> attr.asdict(User("jane", "s33kred", 42),
+   ...                  filter=attr.filters.exclude(attr.fields(User).password, int))
    {'login': 'jane'}
    >>> @attr.s
    ... class C(object):
    ...     x = attr.ib()
    ...     y = attr.ib()
    ...     z = attr.ib()
-   >>> attr.asdict(C("foo", "2", 3), filter=attr.filters.include(int, C.x))
+   >>> attr.asdict(C("foo", "2", 3),
+   ...             filter=attr.filters.include(int, attr.fields(C).x))
    {'z': 3, 'x': 'foo'}
+
+Other times, all you want is a tuple and ``attrs`` won't let you down:
+
+.. doctest::
+
+   >>> import sqlite3
+   >>> import attr
+   >>> @attr.s
+   ... class Foo:
+   ...    a = attr.ib()
+   ...    b = attr.ib()
+   >>> foo = Foo(2, 3)
+   >>> with sqlite3.connect(":memory:") as conn:
+   ...    c = conn.cursor()
+   ...    c.execute("CREATE TABLE foo (x INTEGER PRIMARY KEY ASC, y)") #doctest: +ELLIPSIS
+   ...    c.execute("INSERT INTO foo VALUES (?, ?)", attr.astuple(foo)) #doctest: +ELLIPSIS
+   ...    foo2 = Foo(*c.execute("SELECT x, y FROM foo").fetchone())
+   <sqlite3.Cursor object at ...>
+   <sqlite3.Cursor object at ...>
+   >>> foo == foo2
+   True
+
+
 
 
 Defaults
@@ -220,9 +248,9 @@ And sometimes you even want mutable objects as default values (ever used acciden
    ... class Connection(object):
    ...     socket = attr.ib()
    ...     @classmethod
-   ...     def connect(cl, db_string):
-   ...        # connect somehow to db_string
-   ...        return cl(socket=42)
+   ...     def connect(cls, db_string):
+   ...        # ... connect somehow to db_string ...
+   ...        return cls(socket=42)
    >>> @attr.s
    ... class ConnectionPool(object):
    ...     db_string = attr.ib()
@@ -256,13 +284,13 @@ More information on why class methods for constructing objects are awesome can b
 Validators
 ----------
 
-Although your initializers should be as dumb as possible, it can come handy to do some kind of validation on the arguments.
+Although your initializers should be as dumb as possible, it can come in handy to do some kind of validation on the arguments.
 That's when :func:`attr.ib`\ ’s ``validator`` argument comes into play.
 A validator is simply a callable that takes three arguments:
 
-#. The *instance* that's being validated.
-#. The *attribute* that it's validating
-#. and finally the *value* that is passed for it.
+#. the *instance* that's being validated,
+#. the *attribute* that it's validating, and finally
+#. the *value* that is passed for it.
 
 If the value does not pass the validator's standards, it just raises an appropriate exception.
 Since the validator runs *after* the instance is initialized, you can refer to other attributes while validating :
@@ -283,7 +311,7 @@ Since the validator runs *after* the instance is initialized, you can refer to o
       ...
    ValueError: 'x' has to be smaller than 'y'!
 
-``attrs`` won't intercept your changes to those attributes but you can always call :func:`attr.validate` on any instance to verify, that it's still valid:
+``attrs`` won't intercept your changes to those attributes but you can always call :func:`attr.validate` on any instance to verify that it's still valid:
 
 .. doctest::
 
@@ -308,7 +336,7 @@ Since the validator runs *after* the instance is initialized, you can refer to o
       ...
    TypeError: ("'x' must be <type 'int'> (got '42' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, factory=NOTHING, validator=<instance_of validator for type <type 'int'>>), <type 'int'>, '42')
 
-If you like `zope.interface <http://docs.zope.org/zope.interface/api.html#zope-interface-interface-specification>`_, ``attrs`` also comes with a :func:`attr.validators.provides` validator:
+If you like `zope.interface <https://zopeinterface.readthedocs.io/en/latest/api.html#zope-interface-interface-specification>`_, ``attrs`` also comes with a :func:`attr.validators.provides` validator:
 
 .. doctest::
 
@@ -383,7 +411,7 @@ Slots
 -----
 
 By default, instances of classes have a dictionary for attribute storage.
-This wastes space for objects having very few instance variables.
+This wastes space for objects having very few data attributes.
 The space consumption can become significant when creating large numbers of instances.
 
 Normal Python classes can avoid using a separate dictionary for each instance of a class by `defining <https://docs.python.org/3.5/reference/datamodel.html#slots>`_ ``__slots__``.
@@ -440,19 +468,45 @@ Slot classes are a little different than ordinary, dictionary-backed classes:
 - Since non-slot classes cannot be turned into slot classes after they have been created, ``attr.s(.., slots=True)`` will *replace* the class it is applied to with a copy.
   In almost all cases this isn't a problem, but we mention it for the sake of completeness.
 
+- Using :mod:`pickle` with slot classes requires pickle protocol 2 or greater.
+  Python 2 uses protocol 0 by default so the protocol needs to be specified.
+  Python 3 uses protocol 3 by default.
+  You can support protocol 0 and 1 by implementing :meth:`__getstate__ <object.__getstate__>` and :meth:`__setstate__ <object.__setstate__>` methods yourself.
+  Those methods are created for frozen slot classes because they won't pickle otherwise.
+  `Think twice <https://www.youtube.com/watch?v=7KnfGDajDQw>`_ before using :mod:`pickle` though.
+
 All in all, setting ``slots=True`` is usually a very good idea.
 
 
-Other Goodies
--------------
+Immutability
+------------
 
-Do you like Rich Hickey?
-I'm glad to report that Clojure's core feature is part of ``attrs``: `assoc <https://clojuredocs.org/clojure.core/assoc>`_!
-I guess that means Clojure can be shut down now, sorry Rich!
+Sometimes you have instances that shouldn't be changed after instantiation.
+Immutability is especially popular in functional programming and is generally a very good thing.
+If you'd like to enforce it, ``attrs`` will try to help:
 
 .. doctest::
 
-   >>> @attr.s
+   >>> @attr.s(frozen=True)
+   ... class C(object):
+   ...     x = attr.ib()
+   >>> i = C(1)
+   >>> i.x = 2
+   Traceback (most recent call last):
+      ...
+   attr.exceptions.FrozenInstanceError: can't set attribute
+   >>> i.x
+   1
+
+Please note that true immutability is impossible in Python but it will :ref:`get <how-frozen>` you 99% there.
+By themselves, immutable classes are useful for long-lived objects that should never change; like configurations for example.
+
+In order to use them in regular program flow, you'll need a way to easily create new instances with changed attributes.
+In Clojure that function is called `assoc <https://clojuredocs.org/clojure.core/assoc>`_ and ``attrs`` shamelessly imitates it: :func:`attr.assoc`:
+
+.. doctest::
+
+   >>> @attr.s(frozen=True)
    ... class C(object):
    ...     x = attr.ib()
    ...     y = attr.ib()
@@ -465,8 +519,12 @@ I guess that means Clojure can be shut down now, sorry Rich!
    >>> i1 == i2
    False
 
+
+Other Goodies
+-------------
+
 Sometimes you may want to create a class programmatically.
-``attrs`` won't let you down:
+``attrs`` won't let you down and gives you :func:`attr.make_class` :
 
 .. doctest::
 

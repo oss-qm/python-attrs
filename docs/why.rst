@@ -4,6 +4,9 @@ Why not…
 ========
 
 
+If you'd like third party's account why ``attrs`` is great, have a look at Glyph's `The One Python Library Everyone Needs <https://glyph.twistedmatrix.com/2016/08/attrs.html>`_!
+
+
 …tuples?
 --------
 
@@ -13,7 +16,7 @@ Readability
 
 What makes more sense while debugging::
 
-   Point(x=1, x=2)
+   Point(x=1, y=2)
 
 or::
 
@@ -54,7 +57,7 @@ Adding an attribute to a class concerns only those who actually care about that 
 …namedtuples?
 -------------
 
-The difference between :func:`collections.namedtuple`\ s and classes decorated by ``attrs`` is that the latter are type-sensitive and less typing aside regular classes:
+The difference between :func:`collections.namedtuple`\ s and classes decorated by ``attrs`` is that the latter are type-sensitive and require less typing as compared with regular classes:
 
 
 .. doctest::
@@ -78,7 +81,7 @@ The difference between :func:`collections.namedtuple`\ s and classes decorated b
    1
 
 
-…while namedtuple’s purpose is *explicitly* to behave like tuples:
+…while a namedtuple is *explicitly* intended to behave like a tuple:
 
 
 .. doctest::
@@ -94,9 +97,25 @@ The difference between :func:`collections.namedtuple`\ s and classes decorated b
 
 This can easily lead to surprising and unintended behaviors.
 
-Other than that, ``attrs`` also adds nifty features like validators or default values.
+Other than that, ``attrs`` also adds nifty features like validators and default values.
 
 .. _tuple: https://docs.python.org/2/tutorial/datastructures.html#tuples-and-sequences
+
+
+…dicts?
+-------
+
+Dictionaries are not for fixed fields.
+
+If you have a dict, it maps something to something else.
+You should be able to add and remove values.
+
+Objects, on the other hand, are supposed to have specific fields of specific types, because their methods have strong expectations of what those fields and types are.
+
+``attrs`` lets you be specific about those expectations; a dictionary does not.
+It gives you a named entity (the class) in your code, which lets you explain in other places whether you take a parameter of that class or return a value of that class.
+
+In other words: if your dict has a fixed and known set of keys, it is an object, not a hash.
 
 
 …hand-written classes?
@@ -178,8 +197,8 @@ If you don't care and like typing, I'm not gonna stop you.
 But if you ever get sick of the repetitiveness, ``attrs`` will be waiting for you. :)
 
 
-…characteristic
----------------
+…characteristic?
+----------------
 
 `characteristic <https://characteristic.readthedocs.io/>`_ is a very similar and fairly popular project of mine.
 So why the self-fork?

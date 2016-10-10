@@ -146,7 +146,7 @@ texinfo_documents = [
 ]
 
 intersphinx_mapping = {
-    "https://docs.python.org/3": None,
+    'python': ('/usr/share/doc/python3-doc/html', '/usr/share/doc/python3-doc/html/objects.inv')
 }
 
 # Allow non-local URIs so we can have images in CHANGELOG etc.

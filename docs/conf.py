@@ -301,5 +301,5 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('../../python3-doc/html', '/usr/share/doc/python3-doc/html/objects.inv')
+    'python': ('/usr/share/doc/python3-doc/html', '/usr/share/doc/python3-doc/html/objects.inv')
 }

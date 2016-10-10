@@ -2,6 +2,8 @@ python-attrs (16.2.0-1) unstable; urgency=medium
 
   * New upstream release.
     - Doc build is now reproducible (closes: #833886).
+  * Fix API documentation build, and use the local copy of the Python
+    documentation (closes: #834639).
 
  -- Tristan Seligmann <mithrandi@debian.org>  Mon, 10 Oct 2016 01:09:18 +0200
 

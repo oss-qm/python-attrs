@@ -15,6 +15,7 @@ Build-Depends:
  python-sphinx-rtd-theme,
  python-zope.interface,
  python3-all,
+ python3-doc,
  python3-hypothesis,
  python3-pytest,
  python3-setuptools,
@@ -84,6 +85,7 @@ Section: doc
 Architecture: all
 Priority: extra
 Depends: ${misc:Depends}, ${sphinxdoc:Depends}
+Recommends: python3-doc
 Description: documentation for the attrs Python library
  attrs is an MIT-licensed Python package with class decorators that ease the
  chores of implementing the most common attribute-related object protocols.

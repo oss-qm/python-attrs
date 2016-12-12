@@ -1,4 +1,4 @@
-From 0fa216d9a6f9f32de524883c34bf32bfa0e6a3a4 Mon Sep 17 00:00:00 2001
+From 0a67006a07baee3577afc8fe7a45e8676d3af680 Mon Sep 17 00:00:00 2001
 From: Tristan Seligmann <mithrandi@mithrandi.net>
 Date: Mon, 10 Oct 2016 04:40:30 +0200
 Subject: Point intersphinx_mapping at local Python docs.

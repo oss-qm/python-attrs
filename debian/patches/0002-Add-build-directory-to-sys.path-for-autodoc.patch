@@ -1,4 +1,4 @@
-From a1e2d3c98dbc1fb1f3c5557124ebd72c67913b42 Mon Sep 17 00:00:00 2001
+From f19260ca33c981b8835b7b03fa1a7aca8df036fe Mon Sep 17 00:00:00 2001
 From: Tristan Seligmann <mithrandi@mithrandi.net>
 Date: Mon, 10 Oct 2016 04:42:22 +0200
 Subject: Add build directory to sys.path for autodoc.

@@ -1,3 +1,9 @@
+python-attrs (17.2.0-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Tristan Seligmann <mithrandi@debian.org>  Fri, 30 Jun 2017 03:43:49 +0200
+
 python-attrs (16.3.0-1) unstable; urgency=medium
 
   * New upstream release.

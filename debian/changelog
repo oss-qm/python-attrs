@@ -7,6 +7,7 @@ python-attrs (17.2.0-1) unstable; urgency=medium
     autodoc.
   * Bump Standards-Version to 4.0.0 (no changes).
   * Update repository location in debian/watch.
+  * Add DEP-8 tests.
 
  -- Tristan Seligmann <mithrandi@debian.org>  Fri, 30 Jun 2017 03:43:49 +0200
 

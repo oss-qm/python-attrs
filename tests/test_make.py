@@ -3,6 +3,9 @@ Tests for `attr._make`.
 """
 
 from __future__ import absolute_import, division, print_function
+
+import inspect
+
 from operator import attrgetter
 
 import pytest
@@ -14,16 +17,18 @@ from attr import _config
 from attr._compat import PY2
 from attr._make import (
     Attribute,
+    Factory,
+    _AndValidator,
     _CountingAttr,
     _transform_attrs,
+    and_,
     attr,
     attributes,
     fields,
     make_class,
     validate,
-    Factory,
 )
-from attr.exceptions import NotAnAttrsClassError
+from attr.exceptions import NotAnAttrsClassError, DefaultAlreadySetError
 
 from .utils import (gen_attr_names, list_of_attrs, simple_attr, simple_attrs,
                     simple_attrs_without_metadata, simple_classes)
@@ -40,7 +45,90 @@ class TestCountingAttr(object):
         Returns an instance of _CountingAttr.
         """
         a = attr()
+
         assert isinstance(a, _CountingAttr)
+
+    def _test_validator_none_is_empty_tuple(self):
+        """
+        If validator is None, it's transformed into an empty tuple.
+        """
+        a = attr(validator=None)
+
+        assert () == a._validator
+
+    def test_validators_lists_to_wrapped_tuples(self):
+        """
+        If a list is passed as validator, it's just converted to a tuple.
+        """
+        def v1(_, __):
+            pass
+
+        def v2(_, __):
+            pass
+
+        a = attr(validator=[v1, v2])
+
+        assert _AndValidator((v1, v2,)) == a._validator
+
+    def test_validator_decorator_single(self):
+        """
+        If _CountingAttr.validator is used as a decorator and there is no
+        decorator set, the decorated method is used as the validator.
+        """
+        a = attr()
+
+        @a.validator
+        def v():
+            pass
+
+        assert v == a._validator
+
+    @pytest.mark.parametrize("wrap", [
+        lambda v: v,
+        lambda v: [v],
+        lambda v: and_(v)
+
+    ])
+    def test_validator_decorator(self, wrap):
+        """
+        If _CountingAttr.validator is used as a decorator and there is already
+        a decorator set, the decorators are composed using `and_`.
+        """
+        def v(_, __):
+            pass
+
+        a = attr(validator=wrap(v))
+
+        @a.validator
+        def v2(self, _, __):
+            pass
+
+        assert _AndValidator((v, v2,)) == a._validator
+
+    def test_default_decorator_already_set(self):
+        """
+        Raise DefaultAlreadySetError if the decorator is used after a default
+        has been set.
+        """
+        a = attr(default=42)
+
+        with pytest.raises(DefaultAlreadySetError):
+            @a.default
+            def f(self):
+                pass
+
+    def test_default_decorator_sets(self):
+        """
+        Decorator wraps the method in a Factory with pass_self=True and sets
+        the default.
+        """
+        a = attr()
+
+        @a.default
+        def f(self):
+            pass
+
+        assert Factory(f, True) == a._default
 
 
 def make_tc():
@@ -105,7 +193,7 @@ class TestTransformAttrs(object):
             "No mandatory attributes allowed after an attribute with a "
             "default value or factory.  Attribute in question: Attribute"
             "(name='y', default=NOTHING, validator=None, repr=True, "
-            "cmp=True, hash=True, init=True, convert=None, "
+            "cmp=True, hash=None, init=True, convert=None, "
             "metadata=mappingproxy({}))",
         ) == e.value.args
 
@@ -159,7 +247,7 @@ class TestTransformAttrs(object):
 
 class TestAttributes(object):
     """
-    Tests for the `attributes` class decorator.
+    Tests for the `attrs`/`attr.s` class decorator.
     """
     @pytest.mark.skipif(not PY2, reason="No old-style classes in Py3")
     def test_catches_old_style(self):
@@ -208,29 +296,24 @@ class TestAttributes(object):
     ])
     def test_adds_all_by_default(self, method_name):
         """
-        If no further arguments are supplied, all add_XXX functions are
-        applied.
+        If no further arguments are supplied, all add_XXX functions except
+        add_hash are applied.  __hash__ is set to None.
         """
         # Set the method name to a sentinel and check whether it has been
         # overwritten afterwards.
         sentinel = object()
 
-        class C1(object):
+        class C(object):
             x = attr()
 
-        setattr(C1, method_name, sentinel)
+        setattr(C, method_name, sentinel)
 
-        C1 = attributes(C1)
+        C = attributes(C)
+        meth = getattr(C, method_name)
 
-        class C2(object):
-            x = attr()
-
-        setattr(C2, method_name, sentinel)
-
-        C2 = attributes(C2)
-
-        assert sentinel != getattr(C1, method_name)
-        assert sentinel != getattr(C2, method_name)
+        assert sentinel != meth
+        if method_name == "__hash__":
+            assert meth is None
 
     @pytest.mark.parametrize("arg_name, method_name", [
         ("repr", "__repr__"),
@@ -240,7 +323,7 @@ class TestAttributes(object):
     ])
     def test_respects_add_arguments(self, arg_name, method_name):
         """
-        If a certain `add_XXX` is `True`, XXX is not added to the class.
+        If a certain `add_XXX` is `False`, `__XXX__` is not added to the class.
         """
         # Set the method name to a sentinel and check whether it has been
         # overwritten afterwards.
@@ -305,10 +388,13 @@ class TestAttributes(object):
         assert C.D.__name__ == "D"
         assert C.D.__qualname__ == C.__qualname__ + ".D"
 
-    def test_post_init(self):
+    @given(with_validation=booleans())
+    def test_post_init(self, with_validation, monkeypatch):
         """
         Verify that __attrs_post_init__ gets called if defined.
         """
+        monkeypatch.setattr(_config, "_run_validators", with_validation)
+
         @attributes
         class C(object):
             x = attr()
@@ -379,6 +465,20 @@ class TestMakeClass(object):
         assert (
             "attrs argument must be a dict or a list.",
         ) == e.value.args
+
+    def test_bases(self):
+        """
+        Parameter bases default to (object,) and subclasses correctly
+        """
+        class D(object):
+            pass
+
+        cls = make_class("C", {})
+        assert cls.__mro__[-1] == object
+
+        cls = make_class("C", {}, bases=(D,))
+        assert D in cls.__mro__
+        assert isinstance(cls(), D)
 
 
 class TestFields(object):
@@ -460,6 +560,18 @@ class TestConvert(object):
         assert c.x == val + 1
         assert c.y == 2
 
+    def test_factory_takes_self(self):
+        """
+        If takes_self on factories is True, self is passed.
+        """
+        C = make_class("C", {"x": attr(default=Factory(
+            (lambda self: self), takes_self=True
+        ))})
+
+        i = C()
+
+        assert i is i.x
+
     def test_convert_before_validate(self):
         """
         Validation happens after conversion.
@@ -531,6 +643,42 @@ class TestValidate(object):
             C(1)
         assert (obj,) == e.value.args
 
+    def test_multiple_validators(self):
+        """
+        If a list is passed as a validator, all of its items are treated as one
+        and must pass.
+        """
+        def v1(_, __, value):
+            if value == 23:
+                raise TypeError("omg")
+
+        def v2(_, __, value):
+            if value == 42:
+                raise ValueError("omg")
+
+        C = make_class("C", {"x": attr(validator=[v1, v2])})
+
+        validate(C(1))
+
+        with pytest.raises(TypeError) as e:
+            C(23)
+
+        assert "omg" == e.value.args[0]
+
+        with pytest.raises(ValueError) as e:
+            C(42)
+
+        assert "omg" == e.value.args[0]
+
+    def test_multiple_empty(self):
+        """
+        Empty list/tuple for validator is the same as None.
+        """
+        C1 = make_class("C", {"x": attr(validator=[])})
+        C2 = make_class("C", {"x": attr(validator=None)})
+
+        assert inspect.getsource(C1.__init__) == inspect.getsource(C2.__init__)
+
 
 # Hypothesis seems to cache values, so the lists of attributes come out
 # unsorted.
@@ -542,7 +690,6 @@ class TestMetadata(object):
     """
     Tests for metadata handling.
     """
-
     @given(sorted_lists_of_attrs)
     def test_metadata_present(self, list_of_attrs):
         """

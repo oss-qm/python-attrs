@@ -4,7 +4,8 @@ How To Contribute
 First off, thank you for considering contributing to ``attrs``!
 It's people like *you* who make it is such a great tool for everyone.
 
-Here are a few guidelines to get you started (but don't be afraid to open half-finished PRs and ask questions if something is unclear!):
+This document is mainly to help you to get started by codifying tribal knowledge and expectations and make it more accessible to everyone.
+But don't be afraid to open half-finished PRs and ask questions if something is unclear!
 
 
 Workflow
@@ -32,7 +33,7 @@ Code
 
      def func(x):
          """
-         Does something.
+         Do something.
 
          :param str x: A very important parameter.
 
@@ -71,23 +72,85 @@ Documentation
      This is a sentence.
      This is another sentence.
 
-- If you add a new feature, demonstrate its awesomeness in the `examples page`_!
-- If your change is noteworthy, add an entry to the changelog_.
-  Use present tense, `semantic newlines`_, and add a link to your pull request:
+- If you start a new section, add two blank lines before and one blank line after the header except if two headers follow immediately after each other:
 
   .. code-block:: rst
 
-     - Add awesome new feature.
+     Last line of previous section.
+
+
+     Header of New Top Section
+     -------------------------
+
+     Header of New Section
+     ^^^^^^^^^^^^^^^^^^^^^
+
+     First line of new section.
+- If you add a new feature, demonstrate its awesomeness in the `examples page`_!
+- If your change is noteworthy, add an entry to the changelog_.
+  Use `semantic newlines`_, and add a link to your pull request:
+
+  .. code-block:: rst
+
+     - Added ``attr.validators.func()``.
        The feature really *is* awesome.
-       [`#1 <https://github.com/hynek/attrs/pull/1>`_]
-     - Fix nasty bug.
+       [`#1 <https://github.com/python-attrs/attrs/pull/1>`_]
+     - ``attr.func()`` now doesn't crash the Large Hadron Collider anymore.
        The bug really *was* nasty.
-       [`#2 <https://github.com/hynek/attrs/pull/2>`_]
+       [`#2 <https://github.com/python-attrs/attrs/pull/2>`_]
+
+
+Local Development Environment
+-----------------------------
+
+You can (and should) run our test suite using tox_ however you’ll probably want a more traditional environment too.
+We highly recommend to develop using the latest Python 3 release because ``attrs`` tries to take advantage of modern features whenever possible.
+
+First create a `virtual environment <https://virtualenv.pypa.io/>`_.
+It’s out of scope for this document to list all the ways to manage virtual environments in Python but if you don’t have already a pet way, take some time to look at tools like `pew <https://github.com/berdario/pew>`_, `virtualfish <http://virtualfish.readthedocs.io/>`_, and `virtualenvwrapper <http://virtualenvwrapper.readthedocs.io/>`_.
+
+Next get an up to date checkout of the ``attrs`` repository:
+
+.. code-block:: bash
+
+    git checkout git@github.com:python-attrs/attrs.git
+
+Change into the newly created directory and **after activating your virtual environment** install an editable version of ``attrs``:
+
+.. code-block:: bash
+
+    cd attrs
+    pip install -e .
+
+If you run the virtual environment’s Python and try to ``import attr`` it should work!
+
+To run the test suite, you'll need our development dependencies which can be installed using
+
+.. code-block:: bash
+
+    pip install -r dev-requirements.txt
+
+At this point
+
+.. code-block:: bash
+
+   python -m pytest
+
+should work and pass!
+
+
+Governance
+----------
+
+``attrs`` is maintained by `team of volunteers`_ that is always open for new members that share our vision of a fast, lean, and magic-free library that empowers programmers to write better code with less effort.
+If you'd like to join, just get a pull request merged and ask to be added in the very same pull request!
+
+**The simple rule is that everyone is welcome to review/merge pull requests of others but nobody is allowed to merge their own code.**
+
+`Hynek Schlawack`_ acts reluctantly as the BDFL_ and has the final say over design decisions.
+
 
 ****
-
-Again, this list is mainly to help you to get started by codifying tribal knowledge and expectations.
-If something is unclear, feel free to ask for help!
 
 Please note that this project is released with a Contributor `Code of Conduct`_.
 By participating in this project you agree to abide by its terms.
@@ -100,13 +163,15 @@ Thank you for considering contributing to ``attrs``!
 .. _`PEP 8`: https://www.python.org/dev/peps/pep-0008/
 .. _`PEP 257`: https://www.python.org/dev/peps/pep-0257/
 .. _`good test docstrings`: https://jml.io/pages/test-docstrings.html
-.. _`Code of Conduct`: https://github.com/hynek/attrs/blob/master/CODE_OF_CONDUCT.rst
-.. _changelog: https://github.com/hynek/attrs/blob/master/CHANGELOG.rst
-.. _`backward compatibility`: https://attrs.readthedocs.io/en/latest/backward-compatibility.html
-.. _`tox`: https://testrun.org/tox/
-.. _pyenv: https://github.com/yyuu/pyenv
-.. _reStructuredText: http://sphinx-doc.org/rest.html
+.. _`Code of Conduct`: https://github.com/python-attrs/attrs/blob/master/CODE_OF_CONDUCT.rst
+.. _changelog: https://github.com/python-attrs/attrs/blob/master/CHANGELOG.rst
+.. _`backward compatibility`: http://www.attrs.org/en/latest/backward-compatibility.html
+.. _tox: https://tox.readthedocs.io/
+.. _pyenv: https://github.com/pyenv/pyenv
+.. _reStructuredText: http://www.sphinx-doc.org/en/stable/rest.html
 .. _semantic newlines: http://rhodesmill.org/brandon/2012/one-sentence-per-line/
-.. _examples page: https://github.com/hynek/attrs/blob/master/docs/examples.rst
-.. _Hypothesis: https://hypothesis.readthedocs.org
-.. _CI: https://travis-ci.org/hynek/attrs/
+.. _examples page: https://github.com/python-attrs/attrs/blob/master/docs/examples.rst
+.. _Hypothesis: https://hypothesis.readthedocs.io/
+.. _CI: https://travis-ci.org/python-attrs/attrs/
+.. _`team of volunteers`: https://github.com/python-attrs
+.. _BDFL: https://en.wikipedia.org/wiki/Benevolent_dictator_for_life

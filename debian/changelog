@@ -1,6 +1,7 @@
 python-attrs (17.2.0-1) unstable; urgency=medium
 
   * New upstream release.
+    - Add build-dependency on six.
 
  -- Tristan Seligmann <mithrandi@debian.org>  Fri, 30 Jun 2017 03:43:49 +0200
 

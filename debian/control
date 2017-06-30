@@ -12,6 +12,7 @@ Build-Depends:
  python-hypothesis,
  python-pytest,
  python-setuptools,
+ python-six,
  python-sphinx-rtd-theme,
  python-zope.interface,
  python3-all,
@@ -19,6 +20,7 @@ Build-Depends:
  python3-hypothesis,
  python3-pytest,
  python3-setuptools,
+ python3-six,
  python3-sphinx,
  python3-zope.interface,
 Standards-Version: 3.9.8

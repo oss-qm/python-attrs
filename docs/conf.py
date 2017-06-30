@@ -31,7 +31,9 @@ def find_version(*file_paths):
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 import sys
-sys.path.insert(0, os.path.abspath('../.pybuild/pythonX.Y_3.5/build'))
+ver = sys.version_info[0:2]
+sys.path.insert(
+    0, os.path.abspath('../.pybuild/pythonX.Y_{0}.{1}/build'.format(*ver)))
 
 # -- General configuration ------------------------------------------------
 

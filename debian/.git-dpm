@@ -2,10 +2,10 @@
 f19260ca33c981b8835b7b03fa1a7aca8df036fe
 f19260ca33c981b8835b7b03fa1a7aca8df036fe
 f9f18163dabea726ad79ab693f42417448756a26
-f9f18163dabea726ad79ab693f42417448756a26
-python-attrs_16.3.0.orig.tar.gz
-11f397eb6ffb12ddc9a51d353ecab457919fe7ef
-53347
+5f47c131690f268c584cb69b4f88d6b50986b57e
+python-attrs_17.2.0.orig.tar.gz
+d8c4c3268524de54410fbe4f3a32db9c9de0c843
+70313
 debianTag="debian/%e%v"
 patchedTag="patched/%e%v"
 upstreamTag="upstream/%e%u"

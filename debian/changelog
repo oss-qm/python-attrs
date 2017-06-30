@@ -5,6 +5,7 @@ python-attrs (17.2.0-1) unstable; urgency=medium
     - Link to local copy of attrs logo from changelog.
   * Use a more reliable method for adding the build path to sys.path for
     autodoc.
+  * Bump Standards-Version to 4.0.0 (no changes).
 
  -- Tristan Seligmann <mithrandi@debian.org>  Fri, 30 Jun 2017 03:43:49 +0200
 

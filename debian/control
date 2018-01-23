@@ -85,7 +85,6 @@ Description: Attributes without boilerplate (PyPy)
 Package: python-attr-doc
 Section: doc
 Architecture: all
-Priority: extra
 Depends: ${misc:Depends}, ${sphinxdoc:Depends}
 Recommends: python3-doc
 Description: documentation for the attrs Python library

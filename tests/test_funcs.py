@@ -4,28 +4,21 @@ Tests for `attr._funcs`.
 
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict, Sequence, Mapping
+from collections import Mapping, OrderedDict, Sequence
 
 import pytest
 
-from hypothesis import assume, given, strategies as st, settings, HealthCheck
+from hypothesis import strategies as st
+from hypothesis import HealthCheck, assume, given, settings
 
-from .utils import simple_classes, nested_classes
+import attr
 
-from attr import (
-    attr,
-    attributes,
-    asdict,
-    assoc,
-    astuple,
-    evolve,
-    fields,
-    has,
-)
-
+from attr import asdict, assoc, astuple, evolve, fields, has
+from attr._compat import TYPE
 from attr.exceptions import AttrsAttributeNotFoundError
 from attr.validators import instance_of
-from attr._compat import TYPE
+
+from .utils import nested_classes, simple_classes
 
 
 MAPPING_TYPES = (dict, OrderedDict)
@@ -70,6 +63,7 @@ class TestAsDict(object):
 
         def assert_proper_dict_class(obj, obj_dict):
             assert isinstance(obj_dict, dict_class)
+
             for field in fields(obj.__class__):
                 field_val = getattr(obj, field.name)
                 if has(field_val.__class__):
@@ -83,6 +77,7 @@ class TestAsDict(object):
                 elif isinstance(field_val, Mapping):
                     # This field holds a dictionary.
                     assert isinstance(obj_dict[field.name], dict_class)
+
                     for key, val in field_val.items():
                         if has(val.__class__):
                             assert_proper_dict_class(val,
@@ -325,7 +320,7 @@ class TestHas(object):
         """
         Returns `True` on decorated classes even if there are no attributes.
         """
-        @attributes
+        @attr.s
         class D(object):
             pass
 
@@ -347,12 +342,13 @@ class TestAssoc(object):
         """
         Empty classes without changes get copied.
         """
-        @attributes(slots=slots, frozen=frozen)
+        @attr.s(slots=slots, frozen=frozen)
         class C(object):
             pass
 
         i1 = C()
-        i2 = assoc(i1)
+        with pytest.deprecated_call():
+            i2 = assoc(i1)
 
         assert i1 is not i2
         assert i1 == i2
@@ -363,7 +359,8 @@ class TestAssoc(object):
         No changes means a verbatim copy.
         """
         i1 = C()
-        i2 = assoc(i1)
+        with pytest.deprecated_call():
+            i2 = assoc(i1)
 
         assert i1 is not i2
         assert i1 == i2
@@ -380,7 +377,10 @@ class TestAssoc(object):
         chosen_names = data.draw(st.sets(st.sampled_from(field_names)))
         change_dict = {name: data.draw(st.integers())
                        for name in chosen_names}
-        changed = assoc(original, **change_dict)
+
+        with pytest.deprecated_call():
+            changed = assoc(original, **change_dict)
+
         for k, v in change_dict.items():
             assert getattr(changed, k) == v
 
@@ -391,8 +391,10 @@ class TestAssoc(object):
         AttrsAttributeNotFoundError.
         """
         # No generated class will have a four letter attribute.
-        with pytest.raises(AttrsAttributeNotFoundError) as e:
+        with pytest.raises(AttrsAttributeNotFoundError) as e, \
+                pytest.deprecated_call():
             assoc(C(), aaaa=2)
+
         assert (
             "aaaa is not an attrs attribute on {cls!r}.".format(cls=C),
         ) == e.value.args
@@ -401,12 +403,26 @@ class TestAssoc(object):
         """
         Works on frozen classes.
         """
-        @attributes(frozen=True)
+        @attr.s(frozen=True)
         class C(object):
-            x = attr()
-            y = attr()
+            x = attr.ib()
+            y = attr.ib()
 
-        assert C(3, 2) == assoc(C(1, 2), x=3)
+        with pytest.deprecated_call():
+            assert C(3, 2) == assoc(C(1, 2), x=3)
+
+    def test_warning(self):
+        """
+        DeprecationWarning points to the correct file.
+        """
+        @attr.s
+        class C(object):
+            x = attr.ib()
+
+        with pytest.warns(DeprecationWarning) as wi:
+            assert C(2) == assoc(C(1), x=2)
+
+        assert __file__ == wi.list[0].filename
 
 
 class TestEvolve(object):
@@ -418,7 +434,7 @@ class TestEvolve(object):
         """
         Empty classes without changes get copied.
         """
-        @attributes(slots=slots, frozen=frozen)
+        @attr.s(slots=slots, frozen=frozen)
         class C(object):
             pass
 
@@ -473,22 +489,23 @@ class TestEvolve(object):
         """
         TypeError isn't swallowed when validation fails within evolve.
         """
-        @attributes
+        @attr.s
         class C(object):
-            a = attr(validator=instance_of(int))
+            a = attr.ib(validator=instance_of(int))
 
         with pytest.raises(TypeError) as e:
             evolve(C(a=1), a="some string")
         m = e.value.args[0]
+
         assert m.startswith("'a' must be <{type} 'int'>".format(type=TYPE))
 
     def test_private(self):
         """
         evolve() acts as `__init__` with regards to private attributes.
         """
-        @attributes
+        @attr.s
         class C(object):
-            _a = attr()
+            _a = attr.ib()
 
         assert evolve(C(1), a=2)._a == 2
 
@@ -502,9 +519,9 @@ class TestEvolve(object):
         """
         evolve() handles `init=False` attributes.
         """
-        @attributes
+        @attr.s
         class C(object):
-            a = attr()
-            b = attr(init=False, default=0)
+            a = attr.ib()
+            b = attr.ib(init=False, default=0)
 
         assert evolve(C(1), a=2).a == 2

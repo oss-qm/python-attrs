@@ -30,13 +30,13 @@ def simple_class(cmp=False, repr=False, hash=False, str=False, slots=False,
 
 
 def simple_attr(name, default=NOTHING, validator=None, repr=True,
-                cmp=True, hash=None, init=True):
+                cmp=True, hash=None, init=True, converter=None):
     """
     Return an attribute with a name and no other bells and whistles.
     """
     return Attribute(
         name=name, default=default, validator=validator, repr=repr,
-        cmp=cmp, hash=hash, init=init
+        cmp=cmp, hash=hash, init=init, converter=converter,
     )
 
 
@@ -145,7 +145,7 @@ def _create_hyp_nested_strategy(simple_class_strategy):
                      attrs_and_classes.map(ordereddict_of_class))
 
 
-bare_attrs = st.just(attr.ib(default=None))
+bare_attrs = st.builds(attr.ib, default=st.none())
 int_attrs = st.integers().map(lambda i: attr.ib(default=i))
 str_attrs = st.text().map(lambda s: attr.ib(default=s))
 float_attrs = st.floats().map(lambda f: attr.ib(default=f))
@@ -164,11 +164,20 @@ def simple_attrs_with_metadata(draw):
     c_attr = draw(simple_attrs)
     keys = st.booleans() | st.binary() | st.integers() | st.text()
     vals = st.booleans() | st.binary() | st.integers() | st.text()
-    metadata = draw(st.dictionaries(keys=keys, values=vals))
+    metadata = draw(st.dictionaries(
+        keys=keys, values=vals, min_size=1, max_size=5))
 
-    return attr.ib(c_attr._default, c_attr._validator, c_attr.repr,
-                   c_attr.cmp, c_attr.hash, c_attr.init, c_attr.convert,
-                   metadata)
+    return attr.ib(
+        default=c_attr._default,
+        validator=c_attr._validator,
+        repr=c_attr.repr,
+        cmp=c_attr.cmp,
+        hash=c_attr.hash,
+        init=c_attr.init,
+        metadata=metadata,
+        type=None,
+        converter=c_attr.converter,
+    )
 
 
 simple_attrs = simple_attrs_without_metadata | simple_attrs_with_metadata()
@@ -218,12 +227,20 @@ def simple_classes(draw, slots=None, frozen=None, private_attrs=None):
         def post_init(self):
             pass
         cls_dict["__attrs_post_init__"] = post_init
-    return make_class("HypClass", cls_dict,
-                      slots=slots_flag, frozen=frozen_flag)
+
+    return make_class(
+        "HypClass",
+        cls_dict,
+        slots=slots_flag,
+        frozen=frozen_flag,
+    )
 
 
 # st.recursive works by taking a base strategy (in this case, simple_classes)
 # and a special function.  This function receives a strategy, and returns
 # another strategy (building on top of the base strategy).
-nested_classes = st.recursive(simple_classes(), _create_hyp_nested_strategy,
-                              max_leaves=10)
+nested_classes = st.recursive(
+    simple_classes(),
+    _create_hyp_nested_strategy,
+    max_leaves=10
+)

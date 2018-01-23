@@ -1,4 +1,4 @@
-From 01bd851dd032ff2a050f489aa2efa59aadbc4a3b Mon Sep 17 00:00:00 2001
+From 0b6c8843c07d72bff99ac5ecf1e89f0809d8754c Mon Sep 17 00:00:00 2001
 From: Tristan Seligmann <mithrandi@mithrandi.net>
 Date: Fri, 30 Jun 2017 03:58:13 +0200
 Subject: Link to local copy of logo.
@@ -8,10 +8,10 @@ Subject: Link to local copy of logo.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/CHANGELOG.rst b/CHANGELOG.rst
-index fc9148a..fddd1e8 100644
+index ee1da54..200fd96 100644
 --- a/CHANGELOG.rst
 +++ b/CHANGELOG.rst
-@@ -39,7 +39,7 @@ To encourage more participation, the project has also been moved into a `dedicat
+@@ -166,7 +166,7 @@ To encourage more participation, the project has also been moved into a `dedicat
  
  ``attrs`` also has a logo now!
  

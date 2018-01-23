@@ -1,10 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
+import platform
 import sys
 import types
+import warnings
 
 
 PY2 = sys.version_info[0] == 2
+PYPY = platform.python_implementation() == "PyPy"
 
 
 if PY2:
@@ -20,9 +23,6 @@ if PY2:
 
     def iteritems(d):
         return d.iteritems()
-
-    def iterkeys(d):
-        return d.iterkeys()
 
     # Python 2 is bereft of a read-only dict proxy, so we make one!
     class ReadOnlyDict(IterableUserDict):
@@ -83,8 +83,57 @@ else:
     def iteritems(d):
         return d.items()
 
-    def iterkeys(d):
-        return d.keys()
-
     def metadata_proxy(d):
         return types.MappingProxyType(dict(d))
+
+
+def import_ctypes():  # pragma: nocover
+    """
+    Moved into a function for testability.
+    """
+    try:
+        import ctypes
+        return ctypes
+    except ImportError:
+        return None
+
+
+if not PY2:
+    def just_warn(*args, **kw):
+        """
+        We only warn on Python 3 because we are not aware of any concrete
+        consequences of not setting the cell on Python 2.
+        """
+        warnings.warn(
+            "Missing ctypes.  Some features like bare super() or accessing "
+            "__class__ will not work with slots classes.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+else:
+    def just_warn(*args, **kw):  # pragma: nocover
+        """
+        We only warn on Python 3 because we are not aware of any concrete
+        consequences of not setting the cell on Python 2.
+        """
+
+
+def make_set_closure_cell():
+    """
+    Moved into a function for testability.
+    """
+    if PYPY:  # pragma: no cover
+        def set_closure_cell(cell, value):
+            cell.__setstate__((value,))
+    else:
+        ctypes = import_ctypes()
+        if ctypes is not None:
+            set_closure_cell = ctypes.pythonapi.PyCell_Set
+            set_closure_cell.argtypes = (ctypes.py_object, ctypes.py_object)
+            set_closure_cell.restype = ctypes.c_int
+        else:
+            set_closure_cell = just_warn
+    return set_closure_cell
+
+
+set_closure_cell = make_set_closure_cell()

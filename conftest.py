@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
+import sys
+
 import pytest
 
 
@@ -8,11 +10,19 @@ def C():
     """
     Return a simple but fully featured attrs class with an x and a y attribute.
     """
-    from attr import attributes, attr
+    import attr
 
-    @attributes
+    @attr.s
     class C(object):
-        x = attr()
-        y = attr()
+        x = attr.ib()
+        y = attr.ib()
 
     return C
+
+
+collect_ignore = []
+if sys.version_info[:2] < (3, 6):
+    collect_ignore.extend([
+        "tests/test_annotations.py",
+        "tests/test_init_subclass.py",
+    ])

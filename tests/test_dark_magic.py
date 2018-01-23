@@ -1,3 +1,7 @@
+"""
+End-to-end tests.
+"""
+
 from __future__ import absolute_import, division, print_function
 
 import pickle
@@ -11,7 +15,7 @@ from hypothesis.strategies import booleans
 import attr
 
 from attr._compat import TYPE
-from attr._make import Attribute, NOTHING
+from attr._make import NOTHING, Attribute
 from attr.exceptions import FrozenInstanceError
 
 
@@ -99,6 +103,9 @@ class WithMetaSlots(object):
     pass
 
 
+FromMakeClass = attr.make_class("FromMakeClass", ["x"])
+
+
 class TestDarkMagic(object):
     """
     Integration tests.
@@ -137,7 +144,7 @@ class TestDarkMagic(object):
         assert (
             "'x' must be <{type} 'int'> (got '1' that is a <{type} "
             "'str'>).".format(type=TYPE),
-            C1.x, int, "1",
+            attr.fields(C1).x, int, "1",
         ) == e.value.args
 
     @given(booleans())
@@ -183,7 +190,7 @@ class TestDarkMagic(object):
     def test_subclass_without_extra_attrs(self, base):
         """
         Sub-classing (where the subclass does not have extra attrs) still
-        behaves the same as a subclss with extra attrs.
+        behaves the same as a subclass with extra attrs.
         """
         class Sub2(base):
             pass
@@ -214,7 +221,8 @@ class TestDarkMagic(object):
 
     @pytest.mark.parametrize("cls",
                              [C1, C1Slots, C2, C2Slots, Super, SuperSlots,
-                              Sub, SubSlots, Frozen, FrozenNoSlots])
+                              Sub, SubSlots, Frozen, FrozenNoSlots,
+                              FromMakeClass])
     @pytest.mark.parametrize("protocol",
                              range(2, pickle.HIGHEST_PROTOCOL + 1))
     def test_pickle_attributes(self, cls, protocol):
@@ -226,7 +234,8 @@ class TestDarkMagic(object):
 
     @pytest.mark.parametrize("cls",
                              [C1, C1Slots, C2, C2Slots, Super, SuperSlots,
-                              Sub, SubSlots, Frozen, FrozenNoSlots])
+                              Sub, SubSlots, Frozen, FrozenNoSlots,
+                              FromMakeClass])
     @pytest.mark.parametrize("protocol",
                              range(2, pickle.HIGHEST_PROTOCOL + 1))
     def test_pickle_object(self, cls, protocol):
@@ -271,3 +280,103 @@ class TestDarkMagic(object):
                 return self.x + 1
 
         assert C(1, 2) == C()
+
+    @pytest.mark.parametrize("slots", [True, False])
+    @pytest.mark.parametrize("frozen", [True, False])
+    def test_attrib_overwrite(self, slots, frozen):
+        """
+        Subclasses can overwrite attributes of their superclass.
+        """
+        @attr.s(slots=slots, frozen=frozen)
+        class SubOverwrite(Super):
+            x = attr.ib(default=attr.Factory(list))
+
+        assert SubOverwrite([]) == SubOverwrite()
+
+    def test_dict_patch_class(self):
+        """
+        dict-classes are never replaced.
+        """
+        class C(object):
+            x = attr.ib()
+
+        C_new = attr.s(C)
+
+        assert C_new is C
+
+    def test_hash_by_id(self):
+        """
+        With dict classes, hashing by ID is active for hash=False even on
+        Python 3.  This is incorrect behavior but we have to retain it for
+        backward compatibility.
+        """
+        @attr.s(hash=False)
+        class HashByIDBackwardCompat(object):
+            x = attr.ib()
+
+        assert (
+            hash(HashByIDBackwardCompat(1)) != hash(HashByIDBackwardCompat(1))
+        )
+
+        @attr.s(hash=False, cmp=False)
+        class HashByID(object):
+            x = attr.ib()
+
+        assert hash(HashByID(1)) != hash(HashByID(1))
+
+        @attr.s(hash=True)
+        class HashByValues(object):
+            x = attr.ib()
+
+        assert hash(HashByValues(1)) == hash(HashByValues(1))
+
+    def test_handles_different_defaults(self):
+        """
+        Unhashable defaults + subclassing values work.
+        """
+        @attr.s
+        class Unhashable(object):
+            pass
+
+        @attr.s
+        class C(object):
+            x = attr.ib(default=Unhashable())
+
+        @attr.s
+        class D(C):
+            pass
+
+    @pytest.mark.parametrize("slots", [True, False])
+    def test_hash_false_cmp_false(self, slots):
+        """
+        hash=False and cmp=False make a class hashable by ID.
+        """
+        @attr.s(hash=False, cmp=False, slots=slots)
+        class C(object):
+            pass
+
+        assert hash(C()) != hash(C())
+
+    def test_overwrite_super(self):
+        """
+        Super classes can overwrite each other and the attributes are added
+        in the order they are defined.
+        """
+        @attr.s
+        class C(object):
+            c = attr.ib(default=100)
+            x = attr.ib(default=1)
+            b = attr.ib(default=23)
+
+        @attr.s
+        class D(C):
+            a = attr.ib(default=42)
+            x = attr.ib(default=2)
+            d = attr.ib(default=3.14)
+
+        @attr.s
+        class E(D):
+            y = attr.ib(default=3)
+            z = attr.ib(default=4)
+
+        assert "E(c=100, b=23, a=42, x=2, d=3.14, y=3, z=4)" == repr(E())

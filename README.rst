@@ -1,9 +1,9 @@
 .. image:: http://www.attrs.org/en/latest/_static/attrs_logo.png
    :alt: attrs Logo
 
-==================================
-attrs: Classes Without Boilerplate
-==================================
+======================================
+``attrs``: Classes Without Boilerplate
+======================================
 
 .. image:: https://readthedocs.org/projects/attrs/badge/?version=stable
    :target: http://www.attrs.org/en/stable/?badge=stable
@@ -32,6 +32,7 @@ For that, it gives you a class decorator and a way to declaratively define the a
 .. code-block:: pycon
 
    >>> import attr
+   
    >>> @attr.s
    ... class SomeClass(object):
    ...     a_number = attr.ib(default=42)
@@ -39,19 +40,25 @@ For that, it gives you a class decorator and a way to declaratively define the a
    ...
    ...     def hard_math(self, another_number):
    ...         return self.a_number + sum(self.list_of_numbers) * another_number
+   
+   
    >>> sc = SomeClass(1, [1, 2, 3])
    >>> sc
    SomeClass(a_number=1, list_of_numbers=[1, 2, 3])
+   
    >>> sc.hard_math(3)
    19
    >>> sc == SomeClass(1, [1, 2, 3])
    True
    >>> sc != SomeClass(2, [3, 2, 1])
    True
+   
    >>> attr.asdict(sc)
    {'a_number': 1, 'list_of_numbers': [1, 2, 3]}
+   
    >>> SomeClass()
    SomeClass(a_number=42, list_of_numbers=[])
+   
    >>> C = attr.make_class("C", ["a", "b"])
    >>> C("foo", "bar")
    C(a='foo', b='bar')
@@ -67,7 +74,7 @@ After *declaring* your attributes ``attrs`` gives you:
 
 *without* writing dull boilerplate code again and again and *without* runtime performance penalties.
 
-This gives you the power to use actual classes with actual types in your code instead of confusing ``tuple``\ s or confusingly behaving ``namedtuple``\ s.
+This gives you the power to use actual classes with actual types in your code instead of confusing ``tuple``\ s or `confusingly behaving <http://www.attrs.org/en/stable/why.html#namedtuples>`_ ``namedtuple``\ s.
 Which in turn encourages you to write *small classes* that do `one thing well <https://www.destroyallsoftware.com/talks/boundaries>`_.
 Never again violate the `single responsibility principle <https://en.wikipedia.org/wiki/Single_responsibility_principle>`_ just because implementing ``__init__`` et al is a painful drag.
 
@@ -77,30 +84,38 @@ Never again violate the `single responsibility principle <https://en.wikipedia.o
 Testimonials
 ============
 
-  *I’m looking forward to is being able to program in Python-with-attrs everywhere.
-  It exerts a subtle, but positive, design influence in all the codebases I’ve see it used in.*
+**Amber Hawkie Brown**, Twisted Release Manager and Computer Owl:
 
-  -- **Glyph Lefkowitz**, creator of `Twisted <https://twistedmatrix.com/>`_, `Automat <https://pypi.python.org/pypi/Automat>`_, and other open source software, in `The One Python Library Everyone Needs <https://glyph.twistedmatrix.com/2016/08/attrs.html>`_
-
-
-  *I'm increasingly digging your attr.ocity. Good job!*
-
-  -- **Łukasz Langa**, prolific CPython core developer and Production Engineer at Facebook
+  Writing a fully-functional class using attrs takes me less time than writing this testimonial.
 
 
-  *Writing a fully-functional class using attrs takes me less time than writing this testimonial.*
+**Glyph Lefkowitz**, creator of `Twisted <https://twistedmatrix.com/>`_, `Automat <https://pypi.python.org/pypi/Automat>`_, and other open source software, in `The One Python Library Everyone Needs <https://glyph.twistedmatrix.com/2016/08/attrs.html>`_:
 
-  -- **Amber Hawkie Brown**, Twisted Release Manager and Computer Owl
+  I’m looking forward to is being able to program in Python-with-attrs everywhere.
+  It exerts a subtle, but positive, design influence in all the codebases I’ve see it used in.
 
 
-  *attrs—classes for humans.  I like it.*
+**Kenneth Reitz**, author of `requests <http://www.python-requests.org/>`_, Python Overlord at Heroku, `on paper no less <https://twitter.com/hynek/status/866817877650751488>`_:
 
-  -- **Kenneth Reitz**, author of `requests <http://www.python-requests.org/>`_, Python Overlord at Heroku, `on paper no less <https://twitter.com/hynek/status/866817877650751488>`_
+  attrs—classes for humans.  I like it.
+
+
+**Łukasz Langa**, prolific CPython core developer and Production Engineer at Facebook:
+
+  I'm increasingly digging your attr.ocity. Good job!
 
 
 .. -end-
 
 .. -project-information-
+
+Getting Help
+============
+
+Please use the ``python-attrs`` tag on `StackOverflow <https://stackoverflow.com/questions/tagged/python-attrs>`_ to get help.
+
+Answering questions of your fellow developers is also great way to help the project!
+
 
 Project Information
 ===================

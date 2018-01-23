@@ -1,7 +1,7 @@
 .. _api:
 
-API
-===
+API Reference
+=============
 
 .. currentmodule:: attr
 
@@ -89,8 +89,8 @@ Core
       >>> @attr.s
       ... class C(object):
       ...     x = attr.ib()
-      >>> C.x
-      Attribute(name='x', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, convert=None, metadata=mappingproxy({}))
+      >>> attr.fields(C).x
+      Attribute(name='x', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, metadata=mappingproxy({}), type=None, converter=None)
 
 
 .. autofunction:: attr.make_class
@@ -133,6 +133,63 @@ Core
 .. autoexception:: attr.exceptions.AttrsAttributeNotFoundError
 .. autoexception:: attr.exceptions.NotAnAttrsClassError
 .. autoexception:: attr.exceptions.DefaultAlreadySetError
+.. autoexception:: attr.exceptions.UnannotatedAttributeError
+
+   For example::
+
+       @attr.s(auto_attribs=True)
+       class C:
+           x: int
+           y = attr.ib()
+
+
+Influencing Initialization
+++++++++++++++++++++++++++
+
+Generally speaking, it's best to keep logic out of your ``__init__``.
+The moment you need a finer control over how your class is instantiated, it's usually best to use a classmethod factory or to apply the `builder pattern <https://en.wikipedia.org/wiki/Builder_pattern>`_.
+
+However, sometimes you need to do that one quick thing after your class is initialized.
+And for that ``attrs`` offers the ``__attrs_post_init__`` hook that is automatically detected and run after ``attrs`` is done initializing your instance:
+
+.. doctest::
+
+   >>> @attr.s
+   ... class C(object):
+   ...     x = attr.ib()
+   ...     y = attr.ib(init=False)
+   ...     def __attrs_post_init__(self):
+   ...         self.y = self.x + 1
+   >>> C(1)
+   C(x=1, y=2)
+
+Please note that you can't directly set attributes on frozen classes:
+
+.. doctest::
+
+   >>> @attr.s(frozen=True)
+   ... class FrozenBroken(object):
+   ...     x = attr.ib()
+   ...     y = attr.ib(init=False)
+   ...     def __attrs_post_init__(self):
+   ...         self.y = self.x + 1
+   >>> FrozenBroken(1)
+   Traceback (most recent call last):
+      ...
+   attr.exceptions.FrozenInstanceError: can't set attribute
+
+If you need to set attributes on a frozen class, you'll have to resort to the :ref:`same trick <how-frozen>` as ``attrs`` and use :meth:`object.__setattr__`:
+
+.. doctest::
+
+   >>> @attr.s(frozen=True)
+   ... class Frozen(object):
+   ...     x = attr.ib()
+   ...     y = attr.ib(init=False)
+   ...     def __attrs_post_init__(self):
+   ...         object.__setattr__(self, "y", self.x + 1)
+   >>> Frozen(1)
+   Frozen(x=1, y=2)
 
 
 .. _helpers:
@@ -153,9 +210,9 @@ Helpers
       ...     x = attr.ib()
       ...     y = attr.ib()
       >>> attr.fields(C)
-      (Attribute(name='x', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, convert=None, metadata=mappingproxy({})), Attribute(name='y', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, convert=None, metadata=mappingproxy({})))
+      (Attribute(name='x', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, metadata=mappingproxy({}), type=None, converter=None), Attribute(name='y', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, metadata=mappingproxy({}), type=None, converter=None))
       >>> attr.fields(C)[1]
-      Attribute(name='y', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, convert=None, metadata=mappingproxy({}))
+      Attribute(name='y', default=NOTHING, validator=None, repr=True, cmp=True, hash=None, init=True, metadata=mappingproxy({}), type=None, converter=None)
       >>> attr.fields(C).y is attr.fields(C)[1]
       True
 
@@ -250,7 +307,7 @@ See :ref:`asdict` for examples.
       >>> attr.validate(i)
       Traceback (most recent call last):
          ...
-      TypeError: ("'x' must be <type 'int'> (got '1' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>, repr=True, cmp=True, hash=None, init=True), <type 'int'>, '1')
+      TypeError: ("'x' must be <type 'int'> (got '1' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>, repr=True, cmp=True, hash=None, init=True, type=None), <type 'int'>, '1')
 
 
 Validators can be globally disabled if you want to run them only in development and tests but not in production because you fear their performance impact:
@@ -283,11 +340,11 @@ Validators
       >>> C("42")
       Traceback (most recent call last):
          ...
-      TypeError: ("'x' must be <type 'int'> (got '42' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>), <type 'int'>, '42')
+      TypeError: ("'x' must be <type 'int'> (got '42' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>, type=None), <type 'int'>, '42')
       >>> C(None)
       Traceback (most recent call last):
          ...
-      TypeError: ("'x' must be <type 'int'> (got None that is a <type 'NoneType'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>, repr=True, cmp=True, hash=None, init=True), <type 'int'>, None)
+      TypeError: ("'x' must be <type 'int'> (got None that is a <type 'NoneType'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>, repr=True, cmp=True, hash=None, init=True, type=None), <type 'int'>, None)
 
 .. autofunction:: attr.validators.in_
 
@@ -339,7 +396,7 @@ Validators
       >>> C("42")
       Traceback (most recent call last):
          ...
-      TypeError: ("'x' must be <type 'int'> (got '42' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>), <type 'int'>, '42')
+      TypeError: ("'x' must be <type 'int'> (got '42' that is a <type 'str'>).", Attribute(name='x', default=NOTHING, validator=<instance_of validator for type <type 'int'>>, type=None), <type 'int'>, '42')
       >>> C(None)
       C(x=None)
 
@@ -355,7 +412,7 @@ Converters
 
       >>> @attr.s
       ... class C(object):
-      ...     x = attr.ib(convert=attr.converters.optional(int))
+      ...     x = attr.ib(converter=attr.converters.optional(int))
       >>> C(None)
       C(x=None)
       >>> C(42)

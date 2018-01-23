@@ -6,14 +6,16 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 
-from attr._make import attributes, attr, fields
-from attr.filters import _split_what, include, exclude
+import attr
+
+from attr import fields
+from attr.filters import _split_what, exclude, include
 
 
-@attributes
+@attr.s
 class C(object):
-    a = attr()
-    b = attr()
+    a = attr.ib()
+    b = attr.ib()
 
 
 class TestSplitWhat(object):
@@ -26,8 +28,8 @@ class TestSplitWhat(object):
         """
         assert (
             frozenset((int, str)),
-            frozenset((C.a,)),
-        ) == _split_what((str, C.a, int,))
+            frozenset((fields(C).a,)),
+        ) == _split_what((str, fields(C).a, int,))
 
 
 class TestInclude(object):

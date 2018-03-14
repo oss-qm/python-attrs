@@ -10,7 +10,7 @@ export PYBUILD_AFTER_TEST=rm -r {build_dir}/.hypothesis
 
 override_dh_auto_build:
 	dh_auto_build
-	PYTHONPATH=. \
+	PYTHONPATH=$(pybuild --print build_dir --interpreter python3) . \
 	   http_proxy='127.0.0.1:9' \
 	   https_proxy='127.0.0.1:9' \
 	   sphinx-build -N -b html docs/ $(CURDIR)/.pybuild/docs/html/

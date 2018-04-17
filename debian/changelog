@@ -1,3 +1,9 @@
+python-attrs (17.4.0-3) UNRELEASED; urgency=medium
+
+  * d/tests: Use AUTOPKGTEST_TMP instead of ADTTMP
+
+ -- Ondřej Nový <onovy@debian.org>  Tue, 17 Apr 2018 13:21:25 +0200
+
 python-attrs (17.4.0-2) unstable; urgency=medium
 
   [ Ondřej Nový ]

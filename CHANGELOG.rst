@@ -166,7 +166,7 @@ To encourage more participation, the project has also been moved into a `dedicat
 
 ``attrs`` also has a logo now!
 
-.. image:: _static/attrs_logo.png
+.. image:: http://www.attrs.org/en/latest/_static/attrs_logo.png
    :alt: attrs logo
 
 

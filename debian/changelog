@@ -1,6 +1,7 @@
 python-attrs (17.4.0-3) UNRELEASED; urgency=medium
 
   * d/tests: Use AUTOPKGTEST_TMP instead of ADTTMP
+  * Convert git repository from git-dpm to gbp layout
 
  -- Ondřej Nový <onovy@debian.org>  Tue, 17 Apr 2018 13:21:25 +0200
 

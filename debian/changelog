@@ -1,3 +1,9 @@
+python-attrs (16.3.0-1~mtx1) unstable; urgency=medium
+
+  * Fixed FTBS
+
+ -- Enrico Weigelt, metux IT consult <info@metux.net>  Tue, 14 Aug 2018 18:21:00 +0200
+
 python-attrs (16.3.0-1) unstable; urgency=medium
 
   * New upstream release.

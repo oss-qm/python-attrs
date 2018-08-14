@@ -15,16 +15,18 @@ Internally they're a representation of the data passed into ``attr.ib`` along wi
 
 In order to ensure that sub-classing works as you'd expect it to work, ``attrs`` also walks the class hierarchy and collects the attributes of all super-classes.
 Please note that ``attrs`` does *not* call ``super()`` *ever*.
-It will write dunder methods to work on *all* of those attributes which also has performance benefits due to less function calls.
+It will write dunder methods to work on *all* of those attributes which also has performance benefits due to fewer function calls.
 
-Once ``attrs`` knows what attributes it has to work on, it writes the requested dunder methods and attaches them to your class.
+Once ``attrs`` knows what attributes it has to work on, it writes the requested dunder methods and -- depending on whether you wish to have ``__slots__`` -- creates a new class for you (``slots=True``) or attaches them to the original class (``slots=False``).
+While creating new classes is more elegant, we've run into several edge cases surrounding metaclasses that make it impossible to go this route unconditionally.
+
 To be very clear: if you define a class with a single attribute  without a default value, the generated ``__init__`` will look *exactly* how you'd expect:
 
 .. doctest::
 
    >>> import attr, inspect
    >>> @attr.s
-   ... class C:
+   ... class C(object):
    ...     x = attr.ib()
    >>> print(inspect.getsource(C.__init__))
    def __init__(self, x):
@@ -51,7 +53,8 @@ Immutability
 
 In order to give you immutability, ``attrs`` will attach a ``__setattr__`` method to your class that raises a :exc:`attr.exceptions.FrozenInstanceError` whenever anyone tries to set an attribute.
 
-In order to circumvent that ourselves in ``__init__``, ``attrs`` uses (an agressively cached) :meth:`object.__setattr__` to set your attributes.  This is (still) slower than a plain assignment:
+To circumvent that ourselves in ``__init__``, ``attrs`` uses (an aggressively cached) :meth:`object.__setattr__` to set your attributes.
+This is (still) slower than a plain assignment:
 
 .. code-block:: none
 
@@ -67,10 +70,10 @@ In order to circumvent that ourselves in ``__init__``, ``attrs`` uses (an agress
   ........................................
   Median +- std dev: 676 ns +- 16 ns
 
-So on my notebook the difference is about 300 nanoseconds (1 second is 1,000,000,000 nanoseconds).
+So on a standard notebook the difference is about 300 nanoseconds (1 second is 1,000,000,000 nanoseconds).
 It's certainly something you'll feel in a hot loop but shouldn't matter in normal code.
 Pick what's more important to you.
 
 ****
 
-Once constructed, frozen instances differ in no way from regular ones except that you cannot change its attributes.
+Once constructed, frozen instances don't differ in any way from regular ones except that you cannot change its attributes.

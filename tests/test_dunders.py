@@ -7,30 +7,29 @@ from __future__ import absolute_import, division, print_function
 import copy
 
 import pytest
+
 from hypothesis import given
 from hypothesis.strategies import booleans
 
-from .utils import simple_attr, simple_class
+import attr
+
 from attr._make import (
-    Factory,
-    NOTHING,
-    _Nothing,
-    _add_init,
-    _add_repr,
-    attr,
-    attributes,
-    fields,
-    make_class,
+    NOTHING, Factory, _add_init, _add_repr, _Nothing, fields, make_class
 )
 from attr.validators import instance_of
+
+from .utils import simple_attr, simple_class
 
 
 CmpC = simple_class(cmp=True)
 CmpCSlots = simple_class(cmp=True, slots=True)
 ReprC = simple_class(repr=True)
 ReprCSlots = simple_class(repr=True, slots=True)
+
+# HashC is hashable by explicit definition while HashCSlots is hashable
+# implicitly.
 HashC = simple_class(hash=True)
-HashCSlots = simple_class(hash=True, slots=True)
+HashCSlots = simple_class(hash=None, cmp=True, frozen=True, slots=True)
 
 
 class InitC(object):
@@ -49,7 +48,10 @@ class TestAddCmp(object):
         """
         If `cmp` is False, ignore that attribute.
         """
-        C = make_class("C", {"a": attr(cmp=False), "b": attr()}, slots=slots)
+        C = make_class("C", {
+            "a": attr.ib(cmp=False),
+            "b": attr.ib()
+        }, slots=slots)
 
         assert C(1, 2) == C(2, 2)
 
@@ -171,7 +173,10 @@ class TestAddRepr(object):
         """
         If `repr` is False, ignore that attribute.
         """
-        C = make_class("C", {"a": attr(repr=False), "b": attr()}, slots=slots)
+        C = make_class("C", {
+            "a": attr.ib(repr=False),
+            "b": attr.ib()
+        }, slots=slots)
 
         assert "C(b=2)" == repr(C(1, 2))
 
@@ -195,17 +200,27 @@ class TestAddRepr(object):
 
         assert "C(_x=42)" == repr(i)
 
-    @pytest.mark.parametrize("add_str", [True, False])
-    def test_str(self, add_str):
+    def test_repr_uninitialized_member(self):
+        """
+        repr signals unset attributes
+        """
+        C = make_class("C", {
+            "a": attr.ib(init=False),
+        })
+
+        assert "C(a=NOTHING)" == repr(C())
+
+    @given(add_str=booleans(), slots=booleans())
+    def test_str(self, add_str, slots):
         """
         If str is True, it returns the same as repr.
 
         This only makes sense when subclassing a class with an poor __str__
         (like Exceptions).
         """
-        @attributes(str=add_str)
+        @attr.s(str=add_str, slots=slots)
         class Error(Exception):
-            x = attr()
+            x = attr.ib()
 
         e = Error(42)
 
@@ -227,14 +242,66 @@ class TestAddHash(object):
     """
     Tests for `_add_hash`.
     """
+    def test_enforces_type(self):
+        """
+        The `hash` argument to both attrs and attrib must be None, True, or
+        False.
+        """
+        exc_args = ("Invalid value for hash.  Must be True, False, or None.",)
+
+        with pytest.raises(TypeError) as e:
+            make_class("C", {}, hash=1),
+
+        assert exc_args == e.value.args
+
+        with pytest.raises(TypeError) as e:
+            make_class("C", {"a": attr.ib(hash=1)}),
+
+        assert exc_args == e.value.args
+
     @given(booleans())
-    def test_hash(self, slots):
+    def test_hash_attribute(self, slots):
         """
-        If `hash` is False, ignore that attribute.
+        If `hash` is False on an attribute, ignore that attribute.
         """
-        C = make_class("C", {"a": attr(hash=False), "b": attr()}, slots=slots)
+        C = make_class("C", {"a": attr.ib(hash=False), "b": attr.ib()},
+                       slots=slots, hash=True)
 
         assert hash(C(1, 2)) == hash(C(2, 2))
+
+    @given(booleans())
+    def test_hash_attribute_mirrors_cmp(self, cmp):
+        """
+        If `hash` is None, the hash generation mirrors `cmp`.
+        """
+        C = make_class("C", {"a": attr.ib(cmp=cmp)}, cmp=True, frozen=True)
+
+        if cmp:
+            assert C(1) != C(2)
+            assert hash(C(1)) != hash(C(2))
+            assert hash(C(1)) == hash(C(1))
+        else:
+            assert C(1) == C(2)
+            assert hash(C(1)) == hash(C(2))
+
+    @given(booleans())
+    def test_hash_mirrors_cmp(self, cmp):
+        """
+        If `hash` is None, the hash generation mirrors `cmp`.
+        """
+        C = make_class("C", {"a": attr.ib()}, cmp=cmp, frozen=True)
+
+        i = C(1)
+
+        assert i == i
+        assert hash(i) == hash(i)
+
+        if cmp:
+            assert C(1) == C(1)
+            assert hash(C(1)) == hash(C(1))
+        else:
+            assert C(1) != C(1)
+            assert hash(C(1)) != hash(C(1))
 
     @pytest.mark.parametrize("cls", [HashC, HashCSlots])
     def test_hash_works(self, cls):
@@ -242,6 +309,20 @@ class TestAddHash(object):
         __hash__ returns different hashes for different values.
         """
         assert hash(cls(1, 2)) != hash(cls(1, 1))
+
+    def test_hash_default(self):
+        """
+        Classes are not hashable by default.
+        """
+        C = make_class("C", {})
+
+        with pytest.raises(TypeError) as e:
+            hash(C())
+
+        assert e.value.args[0] in (
+            "'C' objects are unhashable",  # PyPy
+            "unhashable type: 'C'",  # CPython
+        )
 
 
 class TestAddInit(object):
@@ -253,7 +334,7 @@ class TestAddInit(object):
         """
         If `init` is False, ignore that attribute.
         """
-        C = make_class("C", {"a": attr(init=False), "b": attr()},
+        C = make_class("C", {"a": attr.ib(init=False), "b": attr.ib()},
                        slots=slots, frozen=frozen)
         with pytest.raises(TypeError) as e:
             C(a=1, b=2)
@@ -270,9 +351,9 @@ class TestAddInit(object):
         argument but initialize it anyway.
         """
         C = make_class("C", {
-            "_a": attr(init=False, default=42),
-            "_b": attr(init=False, default=Factory(list)),
-            "c": attr()
+            "_a": attr.ib(init=False, default=42),
+            "_b": attr.ib(init=False, default=Factory(list)),
+            "c": attr.ib()
         }, slots=slots, frozen=frozen)
         with pytest.raises(TypeError):
             C(a=1, c=2)
@@ -289,8 +370,8 @@ class TestAddInit(object):
         attribute.
         """
         make_class("C", {
-            "a": attr(default=Factory(list)),
-            "b": attr(init=False),
+            "a": attr.ib(default=Factory(list)),
+            "b": attr.ib(init=False),
         }, slots=slots, frozen=frozen)
 
     def test_sets_attributes(self):
@@ -332,6 +413,7 @@ class TestAddInit(object):
             ]
         C = _add_init(C, False)
         i = C()
+
         assert [] == i.a
         assert isinstance(i.b, D)
 
@@ -346,10 +428,11 @@ class TestAddInit(object):
         def raiser(*args):
             raise VException(*args)
 
-        C = make_class("C", {"a": attr("a", validator=raiser)})
+        C = make_class("C", {"a": attr.ib("a", validator=raiser)})
         with pytest.raises(VException) as e:
             C(42)
-        assert (C.a, 42,) == e.value.args[1:]
+
+        assert (fields(C).a, 42,) == e.value.args[1:]
         assert isinstance(e.value.args[0], C)
 
     def test_validator_slots(self):
@@ -363,9 +446,10 @@ class TestAddInit(object):
         def raiser(*args):
             raise VException(*args)
 
-        C = make_class("C", {"a": attr("a", validator=raiser)}, slots=True)
+        C = make_class("C", {"a": attr.ib("a", validator=raiser)}, slots=True)
         with pytest.raises(VException) as e:
             C(42)
+
         assert (fields(C)[0], 42,) == e.value.args[1:]
         assert isinstance(e.value.args[0], C)
 
@@ -374,10 +458,13 @@ class TestAddInit(object):
         """
         Does not interfere when setting non-attrs attributes.
         """
-        C = make_class("C", {"a": attr("a", validator=instance_of(int))},
-                       slots=slots)
+        C = make_class("C", {
+            "a": attr.ib("a", validator=instance_of(int))
+        }, slots=slots)
         i = C(1)
+
         assert 1 == i.a
+
         if not slots:
             i.b = "foo"
             assert "foo" == i.b

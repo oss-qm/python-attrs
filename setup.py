@@ -2,7 +2,7 @@ import codecs
 import os
 import re
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 
 ###############################################################################
@@ -23,11 +23,27 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.4",
     "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 INSTALL_REQUIRES = []
+EXTRAS_REQUIRE = {
+    "docs": [
+        "sphinx",
+        "zope.interface",
+    ],
+    "tests": [
+        "coverage",
+        "hypothesis",
+        "pympler",
+        "pytest",
+        "six",
+        "zope.interface",
+    ],
+}
+EXTRAS_REQUIRE["dev"] = EXTRAS_REQUIRE["tests"] + EXTRAS_REQUIRE["docs"]
 
 ###############################################################################
 
@@ -91,4 +107,5 @@ if __name__ == "__main__":
         zip_safe=False,
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
     )

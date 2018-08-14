@@ -1,3 +1,4 @@
+dist: trusty
 sudo: false
 cache:
   directories:
@@ -7,6 +8,8 @@ language: python
 
 
 matrix:
+  fast_finish: true
+
   include:
     - python: "2.7"
       env: TOXENV=py27
@@ -14,18 +17,31 @@ matrix:
       env: TOXENV=py34
     - python: "3.5"
       env: TOXENV=py35
-    - python: "pypy"
+    - python: "3.6"
+      env: TOXENV=py36
+    - python: "pypy2.7-5.8.0"
       env: TOXENV=pypy
+    - python: "pypy3.5-5.8.0"
+      env: TOXENV=pypy3
+
+    # Prevent breakage by a new release
+    - python: "3.6-dev"
+      env: TOXENV=py36
 
     # Meta
-    - python: "3.5"
+    - python: "3.6"
       env: TOXENV=flake8
-    - python: "3.5"
+    - python: "3.6"
       env: TOXENV=manifest
-    - python: "3.5"
+    - python: "3.6"
       env: TOXENV=docs
-    - python: "3.5"
+    - python: "3.6"
       env: TOXENV=readme
+    - python: "3.6"
+      env: TOXENV=changelog
+
+  allow_failures:
+    python: "3.6-dev"
 
 
 install:

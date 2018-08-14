@@ -5,7 +5,7 @@ Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.
 Uploaders: Tristan Seligmann <mithrandi@debian.org>
 Build-Depends:
  debhelper (>= 9),
- dh-python,
+ dh-python (>= 2.20170125),
  pypy,
  pypy-setuptools,
  python-all,
